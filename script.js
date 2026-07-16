@@ -30,12 +30,15 @@ let currentOrdersPage = 1;
 
 let draftBundleItems = [];
 let editingBundleId = null;
-let editOrderTempItem = null;
 let isMobileCartExpanded = false; 
 
 // Internal Supplier Batch State
 let currentBatchItems = [];
 let currentApFilter = 'all';
+let confirmProceedCallback = null;
+
+// Persistent Transaction Edit Session State
+let editingOrderId = null;
 
 // Global layout action listeners
 document.addEventListener('click', (e) => {
@@ -58,6 +61,13 @@ document.addEventListener('click', (e) => {
         bItemDropdown.classList.add('hidden');
     }
 
+    // Click outside bindings for Supplier entry dropdown
+    const sInput = document.getElementById('bnpl-supplier');
+    const sDropdown = document.getElementById('supplier-dropdown');
+    if(sInput && sDropdown && !sInput.contains(e.target) && !sDropdown.contains(e.target)) {
+        sDropdown.classList.add('hidden');
+    }
+
     // Click outside bindings for calculator wrapper
     const calcPopup = document.getElementById('calculator-popup');
     const calcWrapper = document.getElementById('calculator-wrapper');
@@ -65,6 +75,50 @@ document.addEventListener('click', (e) => {
         toggleCalculator(false);
     }
 });
+
+// Configure Confirmation Modal Callback Triggers
+document.addEventListener('DOMContentLoaded', () => {
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+    const proceedBtn = document.getElementById('confirm-proceed-btn');
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            closeModal('confirmation-popup-modal');
+            confirmProceedCallback = null;
+        });
+    }
+    if (proceedBtn) {
+        proceedBtn.addEventListener('click', () => {
+            if (confirmProceedCallback) confirmProceedCallback();
+            closeModal('confirmation-popup-modal');
+            confirmProceedCallback = null;
+        });
+    }
+});
+
+// Universal Backdrop Close Utility
+function closeModalOnBackdrop(e, modalId) {
+    if (e.target === e.currentTarget) {
+        closeModal(modalId);
+    }
+}
+
+// Show Custom Confirmation popup UI instead of generic system triggers
+function requestUserConfirmation(title, message, proceedText, callback) {
+    document.getElementById('confirm-modal-title').innerText = title;
+    document.getElementById('confirm-modal-message').innerText = message;
+    
+    const proceedBtn = document.getElementById('confirm-proceed-btn');
+    proceedBtn.innerText = proceedText;
+    if (proceedText === 'Clear' || proceedText === 'Delete') {
+        proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-3 rounded-xl transition-colors btn-transition";
+    } else {
+        proceedBtn.className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-3 rounded-xl transition-colors btn-transition";
+    }
+    
+    confirmProceedCallback = callback;
+    openModal('confirmation-popup-modal');
+}
 
 // Set default date inputs
 function initDateDefaults() {
@@ -98,6 +152,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
+// Global modal animation handler methods
 function openModal(id) {
     const modal = document.getElementById(id);
     modal.classList.remove('hidden');
@@ -107,10 +162,13 @@ function openModal(id) {
     }, 10);
 }
 
+// Fixed popup dismiss settings to reset structural layout visibility properties
 function closeModal(id) {
     const modal = document.getElementById(id);
+    if (!modal) return;
     modal.classList.add('opacity-0');
-    modal.querySelector('div').classList.add('scale-95');
+    const innerDiv = modal.querySelector('div');
+    if (innerDiv) innerDiv.classList.add('scale-95');
     setTimeout(() => modal.classList.add('hidden'), 200);
 }
 
@@ -122,6 +180,24 @@ function logActivity(type, message) {
         type, message, timestamp
     });
     if (activityLog.length > 50) activityLog.pop();
+}
+
+// Backward Compatibility Data Mapper for Single-Item Legacy Records vs Multi-Item Receipt Baskets
+function getOrderItems(order) {
+    if (order.items && Array.isArray(order.items)) {
+        return order.items;
+    }
+    // Return adaptive mapped structure representation for legacy entries smoothly
+    return [{
+        id: order.itemId || "legacy-id",
+        name: order.itemName || "Unknown Product",
+        qty: order.orderQty || 1,
+        sellPrice: (order.totalRevenue / (order.orderQty || 1)) || 0,
+        unitCost: (order.totalCost / (order.orderQty || 1)) || 0,
+        effectiveTotal: order.totalRevenue || 0,
+        totalCost: order.totalCost || 0,
+        totalProfit: order.totalProfit || 0
+    }];
 }
 
 // ================= FLOATING HEADER CALCULATOR ENGINE =================
@@ -204,7 +280,11 @@ function handleLogin(e) {
     auth.signInWithEmailAndPassword(email, password).then(() => showToast('Signed in successfully', 'success')).catch(() => document.getElementById('auth-error').classList.remove('hidden'));
 }
 
-function handleLogout() { if(confirm("Log out of your session?")) auth.signOut().then(() => window.location.reload()); }
+function handleLogout() {
+    requestUserConfirmation("Sign Out", "Are you sure you want to log out of your session?", "Sign Out", () => {
+        auth.signOut().then(() => window.location.reload());
+    });
+}
 
 // ================= DATABASE WRAPPERS =================
 function saveInventory() { db.ref('inventory').set(inventory); }
@@ -260,6 +340,16 @@ function initTheme() {
     updateThemeIcons();
 }
 
+// Complete clear operation for Recent Activity Logs
+function confirmClearActivityLog() {
+    requestUserConfirmation("Clear Activity Log", "Are you sure you want to permanently clear the activity records?", "Clear", () => {
+        activityLog = [];
+        saveActivityLog();
+        renderActivityLog();
+        showToast("Activity history cleared", "info");
+    });
+}
+
 function toggleTheme() {
     const html = document.documentElement;
     if (html.classList.contains('dark')) { html.classList.remove('dark'); localStorage.setItem('theme', 'light'); } 
@@ -308,7 +398,7 @@ function isWithinTimeframe(dateStr, tf) {
     const now = new Date();
     if (tf === 'today') return date.toDateString() === now.toDateString();
     if (tf === 'week') {
-        const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
+        const firstDay = new Date(now.setDate(now.getDate() - now.getDate() - now.getDay()));
         now.setHours(23,59,59,999);
         const lastDay = new Date(now.setDate(now.getDate() - now.getDay() + 6));
         return date >= firstDay && date <= lastDay;
@@ -371,8 +461,8 @@ function openFinancialModal(type) {
         
         head.innerHTML = `
             <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                <th class="py-3 px-4 sm:px-5">Date & ID</th>
-                <th class="py-3 px-3 sm:px-4">Item & Qty</th>
+                <th class="py-3 px-4 sm:px-5">Date & Receipt ID</th>
+                <th class="py-3 px-3 sm:px-4">Baskets Line Items</th>
                 <th class="py-3 px-3 sm:px-4 text-right">Revenue</th>
                 <th class="py-3 px-3 sm:px-4 text-right">Profit</th>
             </tr>
@@ -380,10 +470,11 @@ function openFinancialModal(type) {
 
         if(timeFilteredOrders.length === 0) list.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold">No sales data for this timeframe.</td></tr>`;
         timeFilteredOrders.forEach(o => {
+            const lines = getOrderItems(o).map(i => `${i.qty}x ${i.name}`).join('<br>');
             list.innerHTML += `
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                     <td class="py-3 px-4 sm:px-5"><div class="font-bold text-slate-900 dark:text-white">${o.id}</div><div class="text-[10px] text-slate-500 mt-0.5">${o.date}</div></td>
-                    <td class="py-3 px-3 sm:px-4 font-semibold text-slate-700 dark:text-slate-300">${o.orderQty}x ${o.itemName}</td>
+                    <td class="py-3 px-3 sm:px-4 text-xs font-semibold text-slate-700 dark:text-slate-300 leading-normal">${lines}</td>
                     <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400">₱ ${o.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                     <td class="py-3 px-3 sm:px-4 text-right font-black text-emerald-600 dark:text-emerald-400">₱ ${o.totalProfit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                 </tr>
@@ -394,7 +485,7 @@ function openFinancialModal(type) {
         
         head.innerHTML = `
             <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                <th class="py-3 px-4 sm:px-5">Customer & ID</th>
+                <th class="py-3 px-4 sm:px-5">Customer & Receipt ID</th>
                 <th class="py-3 px-3 sm:px-4 text-right">Total Owed</th>
                 <th class="py-3 px-3 sm:px-4 text-right">Amount Paid</th>
                 <th class="py-3 px-3 sm:px-4 text-right text-rose-500">Balance Due</th>
@@ -586,19 +677,14 @@ if(itemNameInput) {
     itemNameInput.addEventListener('input', showDropdown);
 }
 
-function calcStockCost() {
-    let qty = parseFloat(document.getElementById('stock-qty-added').value) || 0;
-    let cost = parseFloat(document.getElementById('stock-cost-per-item').value) || 0;
-    document.getElementById('stock-total-cost').innerText = `₱ ${(qty * cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-}
-
 function handleStockSubmit(e) {
     e.preventDefault();
     const name = document.getElementById('item-name').value.trim();
-    const qtyAdded = parseInt(document.getElementById('stock-qty-added').value);
-    const costPerItem = parseFloat(document.getElementById('stock-cost-per-item').value);
     const sellPrice = parseFloat(document.getElementById('sell-price').value);
     const fileInput = document.getElementById('item-image-file');
+
+    const recMin = parseFloat(document.getElementById('stock-rec-cpp-min').value) || 0;
+    const recMax = parseFloat(document.getElementById('stock-rec-cpp-max').value) || 0;
 
     if (fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
@@ -612,62 +698,37 @@ function handleStockSubmit(e) {
                 else { if (height > max_size) { width *= max_size / height; height = max_size; } }
                 canvas.width = width; canvas.height = height;
                 canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                commitStockBatch(name, qtyAdded, costPerItem, sellPrice, canvas.toDataURL('image/jpeg', 0.8));
+                commitNewProduct(name, sellPrice, canvas.toDataURL('image/jpeg', 0.8), recMin, recMax);
             }
             img.src = event.target.result;
         }
         reader.readAsDataURL(fileInput.files[0]);
-    } else commitStockBatch(name, qtyAdded, costPerItem, sellPrice, null);
+    } else commitNewProduct(name, sellPrice, null, recMin, recMax);
 }
 
-function commitStockBatch(name, qtyAdded, costPerItem, sellPrice, base64Image) {
-    const totalCost = qtyAdded * costPerItem;
-
-    const historyEntry = {
-        id: 'SH-' + Date.now().toString().slice(-6),
-        productName: name,
-        qtyAdded: qtyAdded,
-        costPerItem: costPerItem,
-        totalCost: totalCost,
-        date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    };
-    stockHistory.unshift(historyEntry);
-
+function commitNewProduct(name, sellPrice, base64Image, recMin = 0, recMax = 0) {
     const existingIndex = inventory.findIndex(item => item.name.toLowerCase() === name.toLowerCase());
 
     if (existingIndex > -1) {
-        const existing = inventory[existingIndex];
-        const totalStockCount = existing.stockQty + qtyAdded;
-        
-        const existingTotalValue = existing.stockQty * (existing.unitCost || 0);
-        const newTotalValue = existingTotalValue + totalCost;
-        const weightedCost = totalStockCount > 0 ? (newTotalValue / totalStockCount) : costPerItem;
-
-        existing.stockQty = totalStockCount;
-        existing.unitCost = weightedCost;
-        existing.sellPrice = sellPrice;
-        if(base64Image) existing.image = base64Image;
-        
-        logActivity('stock_adj', `Added ${qtyAdded} units to existing stock: ${name}`);
-        showToast("Stock merged and updated", "success");
+        showToast("Product is already registered. Please edit details below instead.", "error");
     } else {
         inventory.push({ 
             id: Date.now().toString(), 
             name, 
-            unitCost: costPerItem, 
+            unitCost: 0, 
             sellPrice, 
-            stockQty: qtyAdded, 
-            image: base64Image 
+            stockQty: 0, 
+            image: base64Image,
+            recCppMin: recMin,
+            recCppMax: recMax
         });
-        logActivity('stock_adj', `Registered new product batch: ${name}`);
-        showToast("New product registered", "success");
+        logActivity('stock_adj', `Registered new empty product container: ${name}`);
+        showToast("New product container registered", "success");
     }
     saveInventory();
-    saveStockHistory();
     saveActivityLog();
     
     document.getElementById('stock-form').reset();
-    document.getElementById('stock-total-cost').innerText = '₱ 0.00';
     if(customDropdown) customDropdown.classList.add('hidden');
 }
 
@@ -705,9 +766,17 @@ function editStock(id) {
     document.getElementById('edit-stock-id').value = item.id;
     document.getElementById('edit-stock-name').value = item.name;
     document.getElementById('edit-stock-qty').value = item.stockQty;
-    document.getElementById('edit-stock-cost').value = item.unitCost || 0;
+    document.getElementById('edit-stock-cost').value = (item.unitCost || 0).toFixed(2);
     document.getElementById('edit-stock-price').value = item.sellPrice || 0;
+    
+    const minVal = item.recCppMin || 0;
+    const maxVal = item.recCppMax || 0;
+    document.getElementById('edit-stock-rec-min').value = minVal || '';
+    document.getElementById('edit-stock-rec-max').value = maxVal || '';
+    document.getElementById('edit-rec-cpp-display').innerText = `₱${minVal.toFixed(2)} - ₱${maxVal.toFixed(2)}`;
+    
     document.getElementById('edit-stock-image-file').value = ''; 
+    document.getElementById('edit-stock-adj-qty').value = ''; 
     openModal('stock-modal');
 }
 
@@ -715,10 +784,14 @@ function saveStockEdit(e) {
     e.preventDefault();
     const id = document.getElementById('edit-stock-id').value;
     const name = document.getElementById('edit-stock-name').value.trim();
-    const qty = parseInt(document.getElementById('edit-stock-qty').value);
-    const cost = parseFloat(document.getElementById('edit-stock-cost').value);
     const price = parseFloat(document.getElementById('edit-stock-price').value);
     const fileInput = document.getElementById('edit-stock-image-file');
+    
+    const adjType = document.getElementById('edit-stock-adj-type').value;
+    const adjQty = parseInt(document.getElementById('edit-stock-adj-qty').value) || 0;
+
+    const recMin = parseFloat(document.getElementById('edit-stock-rec-min').value) || 0;
+    const recMax = parseFloat(document.getElementById('edit-stock-rec-max').value) || 0;
 
     const item = inventory.find(i => i.id === id);
     if (item) {
@@ -727,11 +800,19 @@ function saveStockEdit(e) {
             orders.forEach(o => { if(o.itemName === item.name) o.itemName = name; });
             requiresOrderUpdate = true;
         }
-        const qtyDiff = qty - item.stockQty;
-        item.name = name; item.stockQty = qty; item.sellPrice = price; item.unitCost = cost;
+
+        // Apply Stock Adjustment Level
+        if (adjQty !== 0) {
+            item.stockQty += adjQty;
+            logActivity('stock_adj', `Manually adjusted stock level of ${name} by ${adjQty > 0 ? '+'+adjQty : adjQty} (${adjType})`);
+        }
+
+        item.name = name; 
+        item.sellPrice = price;
+        item.recCppMin = recMin;
+        item.recCppMax = recMax;
         
         const completeSave = () => {
-            logActivity('stock_adj', `Manually edited details for ${name} ${qtyDiff !== 0 ? `(Diff: ${qtyDiff > 0 ? '+'+qtyDiff : qtyDiff})` : ''}`);
             saveInventory();
             saveActivityLog();
             if(requiresOrderUpdate) saveOrders();
@@ -762,7 +843,7 @@ function renderInventoryTable() {
     if(!list) return; list.innerHTML = '';
     
     if(inventory.length === 0) { 
-        list.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-slate-400"><i data-lucide="package-open" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">Stock room is empty</p></td></tr>`; 
+        list.innerHTML = `<tr><td colspan="8" class="py-12 text-center text-slate-400"><i data-lucide="package-open" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">Stock room is empty</p></td></tr>`; 
         initIcons(); return; 
     }
     
@@ -771,17 +852,48 @@ function renderInventoryTable() {
         if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" class="w-10 h-10 object-cover rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
         else detailBlock = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-sm flex-shrink-0 border border-indigo-100 dark:border-indigo-800/50">${item.name.substring(0,2).toUpperCase()}</div><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
 
-        list.innerHTML += `
-            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                <td class="py-3 px-4 sm:px-5 whitespace-nowrap">${detailBlock}</td>
-                <td class="py-3 px-3 sm:px-4 text-center">
-                    <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-black tracking-wide ${item.stockQty <= 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : (item.stockQty <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300')} border ${item.stockQty <= 0 ? 'border-rose-200 dark:border-rose-800/30' : (item.stockQty <= 3 ? 'border-amber-200 dark:border-amber-800/30' : 'border-slate-200 dark:border-slate-700/50')}">${item.stockQty} pcs</span>
-                </td>
-                <td class="py-3 px-3 sm:px-4 text-right text-slate-500 font-semibold tracking-tight">₱ ${(item.unitCost || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400 tracking-tight">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td class="py-3 px-4 sm:px-5 text-right"><div class="flex items-center justify-end gap-1.5 sm:gap-2"><button onclick="addToCart('${item.id}'); switchTab('orders');" title="Sell" class="p-2 sm:p-2.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-xl transition-colors border border-indigo-100 dark:border-indigo-800/30 shadow-sm btn-transition min-h-[36px] min-w-[36px] flex items-center justify-center"><i data-lucide="plus" class="w-4 h-4"></i></button><button onclick="editStock('${item.id}')" title="Edit" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition border border-transparent hover:border-slate-200 dark:hover:border-slate-600 min-h-[36px] min-w-[36px] flex items-center justify-center"><i data-lucide="edit-2" class="w-4 h-4"></i></button></div></td>
-            </tr>
+        // Recommended Bounds tag
+        const minRec = item.recCppMin || 0;
+        const maxRec = item.recCppMax || 0;
+        const recommendationTag = (minRec > 0 || maxRec > 0) 
+            ? `<div class="text-[9px] font-black text-indigo-500/80 uppercase mt-0.5 tracking-wide">Rec: ₱${minRec.toFixed(0)}-₱${maxRec.toFixed(0)}</div>` 
+            : '';
+
+        const averageCPP = item.unitCost || 0;
+        const sellingPrice = item.sellPrice || 0;
+        const profitPerPiece = sellingPrice - averageCPP;
+        const profitMargin = sellingPrice > 0 ? (profitPerPiece / sellingPrice) * 100 : 0;
+        const totalValue = item.stockQty * averageCPP;
+
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer";
+        
+        row.onclick = (e) => {
+            if (e.target.closest('.action-prevent-trigger') || e.target.closest('button')) return;
+            editStock(item.id);
+        };
+
+        row.innerHTML = `
+            <td class="py-3 px-4 sm:px-5 whitespace-nowrap">
+                ${detailBlock}
+                ${recommendationTag}
+            </td>
+            <td class="py-3 px-3 sm:px-4 text-center">
+                <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-black tracking-wide ${item.stockQty <= 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : (item.stockQty <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300')} border ${item.stockQty <= 0 ? 'border-rose-200 dark:border-rose-800/30' : (item.stockQty <= 3 ? 'border-amber-200 dark:border-amber-800/30' : 'border-slate-200 dark:border-slate-700/50')}">${item.stockQty} pcs</span>
+            </td>
+            <td class="py-3 px-3 sm:px-4 text-right text-slate-500 font-semibold tracking-tight">₱ ${averageCPP.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+            <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400 tracking-tight">₱ ${sellingPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="py-3 px-3 sm:px-4 text-right font-bold text-emerald-600 tracking-tight">₱ ${profitPerPiece.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-500">${profitMargin.toFixed(2)}%</td>
+            <td class="py-3 px-3 sm:px-4 text-right font-semibold text-slate-700 dark:text-slate-200">₱ ${totalValue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="py-3 px-4 sm:px-5 text-right action-prevent-trigger">
+                <div class="flex items-center justify-end gap-1.5 sm:gap-2">
+                    <button onclick="addToCart('${item.id}'); switchTab('orders');" title="Sell" class="p-2 sm:p-2.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-xl transition-colors border border-indigo-100 dark:border-indigo-800/30 shadow-sm btn-transition min-h-[36px] min-w-[36px] flex items-center justify-center"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    <button onclick="deleteProduct('${item.id}')" title="Delete Product" class="p-2 sm:p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors border border-transparent hover:border-rose-200 dark:hover:border-rose-600 min-h-[36px] min-w-[36px] flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            </td>
         `;
+        list.appendChild(row);
     });
 }
 
@@ -816,7 +928,7 @@ function removeDraftBundleItem(index) { draftBundleItems.splice(index, 1); rende
 function renderDraftBundleItems() {
     const list = document.getElementById('draft-bundle-list'); list.innerHTML = '';
     draftBundleItems.forEach((d, i) => {
-        list.innerHTML += `<div class="flex justify-between items-center bg-white dark:bg-slate-800 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-600"><span>${d.qty}x ${d.name}</span><button type="button" onclick="removeDraftBundleItem(${i})" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-md btn-transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>`;
+        list.innerHTML += `<div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-600"><span>${d.qty}x ${d.name}</span><button type="button" onclick="removeDraftBundleItem(${i})" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-md btn-transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>`;
     }); initIcons();
 }
 
@@ -952,7 +1064,7 @@ function updateCartQty(id, change) {
     const match = cart.find(c => c.id === id); if(!match) return; match.qty += change;
     if(match.qty <= 0) {
         cart = cart.filter(c => c.id !== id);
-        if (cart.length === 0) toggleMobileCart(false); 
+        if (cart.length === 0 && !editingOrderId) toggleMobileCart(false); 
     }
     else if(match.qty > match.maxStock) { match.qty = match.maxStock; showToast("Max stock limit reached", "info"); } renderCart();
 }
@@ -962,17 +1074,32 @@ function renderCart() {
     
     const badgeCountEl = document.getElementById('cart-badge-count');
     const headerTotalEl = document.getElementById('mobile-cart-total-header');
+    const modeBadge = document.getElementById('cart-mode-badge');
+    const actionBtn = document.getElementById('cart-action-btn');
+    const cartTitle = document.getElementById('cart-title');
+
+    if (editingOrderId) {
+        if(modeBadge) modeBadge.classList.remove('hidden');
+        if(actionBtn) actionBtn.innerText = "Cancel";
+        if(cartTitle) cartTitle.innerText = `Edit: ${editingOrderId}`;
+    } else {
+        if(modeBadge) modeBadge.classList.add('hidden');
+        if(actionBtn) actionBtn.innerText = "Clear";
+        if(cartTitle) cartTitle.innerText = "Current Cart";
+    }
 
     if(cart.length === 0) {
         container.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 pointer-events-none"><i data-lucide="shopping-bag" class="w-12 h-12 mb-3 opacity-30"></i><p class="text-[11px] font-black uppercase tracking-wider">Cart is empty</p></div>`;
         document.getElementById('cart-total-display').innerText = '0.00'; 
+        document.getElementById('cart-subtotal-display').innerText = '0.00';
+        document.getElementById('cart-discount-display').innerText = '0.00';
+        document.getElementById('cart-tax-display').innerText = '0.00';
         if(badgeCountEl) badgeCountEl.classList.add('hidden');
         if(headerTotalEl) headerTotalEl.innerText = '₱ 0.00';
         initIcons(); return;
     }
 
     const cartCalc = calculateCart();
-    
     let totalItemQuantity = cart.reduce((accum, item) => accum + item.qty, 0);
     if (badgeCountEl) {
         badgeCountEl.innerText = totalItemQuantity;
@@ -987,7 +1114,7 @@ function renderCart() {
         container.innerHTML += `
             <div class="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-600 animate-scale-in">
                 <div class="flex flex-col flex-1 min-w-0 mr-3"><span class="font-bold text-slate-900 dark:text-slate-100 truncate text-xs mb-0.5">${item.name}</span><div>${priceDisplay}</div></div>
-                <div class="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-inner">
+                <div class="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-xl border border-slate-100/50 dark:border-slate-700/50 shadow-inner">
                     <button onclick="updateCartQty('${item.id}', -1)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all hover:shadow-sm min-h-[36px] min-w-[36px]"><i data-lucide="minus" class="w-4 h-4"></i></button>
                     <span class="w-6 text-center font-black text-sm text-slate-900 dark:text-white">${item.qty}</span>
                     <button onclick="updateCartQty('${item.id}', 1)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-indigo-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all hover:shadow-sm min-h-[36px] min-w-[36px]"><i data-lucide="plus" class="w-4 h-4"></i></button>
@@ -1003,8 +1130,11 @@ function renderCart() {
     
     const formattedTotalStr = cartCalc.total.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
     document.getElementById('cart-total-display').innerText = formattedTotalStr;
-    if(headerTotalEl) headerTotalEl.innerText = `₱ ${formattedTotalStr} (${totalItemQuantity} items)`;
+    document.getElementById('cart-subtotal-display').innerText = (cartCalc.total + cartCalc.savings).toLocaleString(undefined, {minimumFractionDigits:2});
+    document.getElementById('cart-discount-display').innerText = cartCalc.savings.toLocaleString(undefined, {minimumFractionDigits:2});
+    document.getElementById('cart-tax-display').innerText = (cartCalc.total * 0.12).toLocaleString(undefined, {minimumFractionDigits:2});
     
+    if(headerTotalEl) headerTotalEl.innerText = `₱ ${formattedTotalStr} (${totalItemQuantity} items)`;
     if(document.getElementById('pos-paid-full').checked) document.getElementById('pos-paid-amount').value = cartCalc.total.toFixed(2);
     initIcons();
 }
@@ -1015,10 +1145,25 @@ function togglePaidFullCheck(cb) {
     else { input.value = ''; input.disabled = false; input.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700'); }
 }
 
-function clearCart() { 
-    cart = []; const pf = document.getElementById('pos-paid-full'); const pamt = document.getElementById('pos-paid-amount');
+function clearCart() {
+    if (editingOrderId) {
+        // Roll back and drop edits, restoring original database quantities perfectly
+        const origOrder = orders.find(o => o.id === editingOrderId);
+        if (origOrder) {
+            getOrderItems(origOrder).forEach(item => {
+                const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+                if(invItem) invItem.stockQty -= item.qty;
+            });
+        }
+        editingOrderId = null;
+        showToast("Order modification discarded", "info");
+    }
+    cart = []; 
+    const pf = document.getElementById('pos-paid-full'); 
+    const pamt = document.getElementById('pos-paid-amount');
     if(pf) pf.checked = false;
     if(pamt) { pamt.disabled = false; pamt.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700'); pamt.value = ''; }
+    document.getElementById('pos-customer').value = '';
     renderCart(); 
     toggleMobileCart(false);
 }
@@ -1049,37 +1194,98 @@ function checkoutCart() {
     if(cart.length === 0) { showToast("Add items to cart first", "error"); return; }
     if(!customer) { showToast("Customer name is required", "error"); document.getElementById('pos-customer').focus(); return; }
     
+    // Check if another active transaction exists for this client (excluding current edit receipt context)
+    const existingActive = orders.find(o => o.customerName.toLowerCase() === customer.toLowerCase() && !o.isPaid && o.status !== 'cancelled' && o.id !== editingOrderId);
+    if (existingActive) {
+        showToast(`Customer already has an active unpaid order (${existingActive.id}). Complete that transaction first.`, "error");
+        return;
+    }
+
     const cartCalc = calculateCart();
     const totalVal = cartCalc.total;
     let totalPaid = parseFloat(document.getElementById('pos-paid-amount').value) || 0;
     if(document.getElementById('pos-paid-full').checked) totalPaid = totalVal;
 
-    cartCalc.items.forEach(cartItem => {
-        const invItem = inventory.find(i => i.id === cartItem.id); if(!invItem) return;
-        invItem.stockQty -= cartItem.qty;
-        const rev = cartItem.effectiveTotal, cost = cartItem.qty * cartItem.unitCost;
-        const itemPaid = totalVal > 0 ? (totalPaid * (rev / totalVal)) : 0;
+    let aggregateCost = 0;
+    const itemsStructure = cart.map(item => {
+        const calcItem = cartCalc.items.find(c => c.id === item.id);
+        const itemCost = item.qty * item.unitCost;
+        aggregateCost += itemCost;
+        
+        return {
+            id: item.id,
+            name: item.name,
+            qty: item.qty,
+            sellPrice: item.sellPrice,
+            unitCost: item.unitCost,
+            effectiveTotal: calcItem.effectiveTotal,
+            totalCost: itemCost,
+            totalProfit: calcItem.effectiveTotal - itemCost
+        };
+    });
 
+    // Finalize stock volume deductions securely
+    cart.forEach(cartItem => {
+        const invItem = inventory.find(i => i.id === cartItem.id); 
+        if(invItem) invItem.stockQty -= cartItem.qty;
+    });
+
+    if (editingOrderId) {
+        // Fetch and map straight into original record document seamlessly
+        const targetOrder = orders.find(o => o.id === editingOrderId);
+        if (targetOrder) {
+            targetOrder.customerName = customer;
+            targetOrder.items = itemsStructure;
+            targetOrder.totalRevenue = totalVal;
+            targetOrder.totalCost = aggregateCost;
+            targetOrder.totalProfit = totalVal - aggregateCost;
+            targetOrder.amountPaid = totalPaid;
+            targetOrder.isPaid = totalPaid >= totalVal - 0.01;
+            targetOrder.isEdited = true;
+            
+            logActivity('sale', `Updated existing transaction invoice ${editingOrderId} for ${customer}`);
+            showToast("Order transaction modified successfully", "success");
+        }
+        editingOrderId = null;
+    } else {
+        // Issue completely new clean ticket reference identifier sequence
+        const newReceiptNum = 'ORD-' + Date.now().toString().slice(-6) + '-' + Math.random().toString(36).substr(2,3).toUpperCase();
         orders.push({
-            id: 'ORD-' + Date.now().toString().slice(-6) + '-' + Math.random().toString(36).substr(2,3).toUpperCase(),
-            customerName: customer, itemName: cartItem.name, orderQty: cartItem.qty,
-            totalRevenue: rev, totalCost: cost, totalProfit: rev - cost,
-            amountPaid: itemPaid, isPaid: itemPaid >= rev - 0.01, isReceived: false, status: 'active', isEdited: false,
+            id: newReceiptNum,
+            customerName: customer,
+            items: itemsStructure,
+            totalRevenue: totalVal,
+            totalCost: aggregateCost,
+            totalProfit: totalVal - aggregateCost,
+            amountPaid: totalPaid,
+            isPaid: totalPaid >= totalVal - 0.01,
+            isReceived: false,
+            status: 'active',
+            isEdited: false,
             date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         });
-    });
-    
-    logActivity('sale', `Processed sale of ${cart.length} items to ${customer}`);
-    showToast("Sale completed successfully", "success"); clearCart(); document.getElementById('pos-customer').value = ''; 
-    
+        logActivity('sale', `Generated new cash invoice ${newReceiptNum} for ${customer}`);
+        showToast("Sale completed successfully", "success");
+    }
+
     saveInventory();
     saveOrders();
     saveActivityLog();
+    
+    // Reset inputs and basket states
+    cart = [];
+    document.getElementById('pos-customer').value = '';
+    const pf = document.getElementById('pos-paid-full');
+    if(pf) pf.checked = false;
+    const pamt = document.getElementById('pos-paid-amount');
+    if(pamt) { pamt.disabled = false; pamt.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700'); pamt.value = ''; }
+    
+    renderCart();
     toggleMobileCart(false);
     switchTab('orders');
 }
 
-// ================= ORDERS LOGIC =================
+// ================= ORDERS HISTORY MODULE =================
 function setOrderTab(tab) {
     currentOrderTab = tab;
     const btnActive = document.getElementById('tab-active-orders'), btnCancel = document.getElementById('tab-cancelled-orders'), filters = document.getElementById('active-filters');
@@ -1119,7 +1325,6 @@ function getFilteredOrders() {
     if(currentSort === 'newest') filtered.sort((a, b) => b.id.localeCompare(a.id));
     else if(currentSort === 'oldest') filtered.sort((a, b) => a.id.localeCompare(b.id));
     else if(currentSort === 'customer') filtered.sort((a, b) => a.customerName.localeCompare(b.customerName));
-    else if(currentSort === 'profit') filtered.sort((a, b) => b.totalProfit - a.totalProfit);
     return filtered;
 }
 
@@ -1129,7 +1334,7 @@ function toggleOrderPaid(orderId) {
         if (order.isPaid) { order.amountPaid = 0; order.isPaid = false; } 
         else { order.amountPaid = order.totalRevenue; order.isPaid = true; } 
         saveOrders(); 
-        showToast("Payment updated", "success"); 
+        showToast("Payment status updated", "success"); 
     } 
 }
 
@@ -1138,56 +1343,89 @@ function toggleOrderReceived(orderId) {
     if (order && order.status !== 'cancelled') { 
         order.isReceived = !order.isReceived; 
         saveOrders(); 
-        showToast("Delivery updated", "success"); 
+        showToast("Delivery status updated", "success"); 
     } 
 }
 
 function editOrder(id) {
-    const order = orders.find(o => o.id === id); if (!order || order.status === 'cancelled') return;
-    document.getElementById('edit-order-id').value = order.id; document.getElementById('edit-order-customer').value = order.customerName; document.getElementById('edit-order-qty').value = order.orderQty; document.getElementById('edit-order-paid').value = order.amountPaid || 0;
-    editOrderTempItem = inventory.find(i => i.name.toLowerCase() === order.itemName.toLowerCase()); openModal('order-modal');
-}
-
-function adjustEditOrderQty(change) {
-    const input = document.getElementById('edit-order-qty'); let val = parseInt(input.value) + change; if(val < 1) val = 1;
-    const order = orders.find(o => o.id === document.getElementById('edit-order-id').value);
-    if(order && editOrderTempItem) { const available = editOrderTempItem.stockQty + order.orderQty; if(val > available) { val = available; showToast("Maximum inventory limit reached", "info"); } }
-    input.value = val;
-}
-
-function saveOrderEdit(e) {
-    e.preventDefault();
-    const id = document.getElementById('edit-order-id').value, customer = document.getElementById('edit-order-customer').value.trim(), qty = parseInt(document.getElementById('edit-order-qty').value), paid = parseFloat(document.getElementById('edit-order-paid').value);
-    const order = orders.find(o => o.id === id); if(!order) return;
-    if(editOrderTempItem) {
-        const diff = order.orderQty - qty; editOrderTempItem.stockQty += diff; order.orderQty = qty;
-        const effectiveUnitPrice = order.totalRevenue / (order.orderQty + diff); order.totalRevenue = qty * effectiveUnitPrice; 
-        order.totalCost = qty * editOrderTempItem.unitCost; order.totalProfit = order.totalRevenue - order.totalCost;
-    }
-    order.customerName = customer; order.amountPaid = paid; order.isPaid = paid >= order.totalRevenue - 0.01; order.isEdited = true;
+    const order = orders.find(o => o.id === id); 
+    if (!order || order.status === 'cancelled') return;
     
-    saveOrders();
+    if (order.isPaid) {
+        showToast("This order is completed and locked. Direct editing is prohibited.", "error");
+        return;
+    }
+
+    if (editingOrderId) {
+        if(!confirm("An editing session is already active. Discard those changes and open this ticket?")) return;
+        // Revert temporary hold state levels out cleanly
+        const priorOrder = orders.find(o => o.id === editingOrderId);
+        if(priorOrder) {
+            getOrderItems(priorOrder).forEach(item => {
+                const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+                if(invItem) invItem.stockQty -= item.qty;
+            });
+        }
+    }
+
+    editingOrderId = order.id;
+
+    // Temporarily restore item stocks into inventory pools for fluid adjustment parameters
+    getOrderItems(order).forEach(item => {
+        const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+        if (invItem) invItem.stockQty += item.qty;
+    });
+
+    // Populate cash register cart frame mapping natively
+    cart = getOrderItems(order).map(item => {
+        const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+        return {
+            id: invItem ? invItem.id : "legacy-id",
+            name: item.name,
+            sellPrice: item.sellPrice,
+            unitCost: item.unitCost,
+            maxStock: invItem ? invItem.stockQty : item.qty,
+            qty: item.qty
+        };
+    });
+
+    document.getElementById('pos-customer').value = order.customerName;
+    
+    // Toggle manual payment values frame input controls out
+    const pAmtInput = document.getElementById('pos-paid-amount');
+    const pFullCheck = document.getElementById('pos-paid-full');
+    if (pFullCheck) pFullCheck.checked = false;
+    if (pAmtInput) {
+        pAmtInput.disabled = false;
+        pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+        pAmtInput.value = order.amountPaid || '';
+    }
+
     saveInventory();
-    closeModal('order-modal'); 
-    showToast("Order updated", "success");
+    renderCart();
+    switchTab('orders');
+    showToast(`Loaded invoice ${order.id} into active basket`, "info");
 }
 
 function cancelOrder(id) {
     const order = orders.find(o => o.id === id);
-    if (order && order.status !== 'cancelled' && confirm(`Cancel order for ${order.customerName}?\nRefunds ${order.orderQty} items to stock.`)) {
-        const item = inventory.find(i => i.name.toLowerCase() === order.itemName.toLowerCase()); if (item) item.stockQty += order.orderQty;
+    if (order && order.status !== 'cancelled' && confirm(`Cancel transaction ticket for ${order.customerName}?\nThis rolls back all item quantities back to active warehouse inventory.`)) {
+        getOrderItems(order).forEach(item => {
+            const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase()); 
+            if (invItem) invItem.stockQty += item.qty;
+        });
         order.status = 'cancelled'; order.isPaid = false; order.isReceived = false; order.amountPaid = 0;
         saveOrders();
         saveInventory();
-        showToast("Order cancelled", "info");
+        showToast("Order transaction voided", "info");
     }
 }
 
 function deleteOrderPermanently(id) {
-    if(confirm("Permanently delete this order from the database? This action cannot be undone.")) {
+    if(confirm("Permanently purge this order from the registry database? This cannot be undone.")) {
         orders = orders.filter(o => o.id !== id);
         saveOrders();
-        showToast("Order permanently deleted", "success");
+        showToast("Order record purged", "success");
     }
 }
 
@@ -1201,25 +1439,26 @@ function renderOrdersTable() {
     if(pageSlicedOrders.length === 0) { list.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400"><div class="flex flex-col items-center justify-center"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">No records found.</p></div></td></tr>`; initIcons(); return; }
     
     pageSlicedOrders.forEach(order => {
-        const due = order.totalRevenue - (order.amountPaid || 0); const isCancelled = order.status === 'cancelled'; const isLocked = (order.isPaid || order.isReceived) && !isCancelled;
+        const due = order.totalRevenue - (order.amountPaid || 0); const isCancelled = order.status === 'cancelled';
         
         let pBadge = isCancelled ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg uppercase tracking-wider"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Void</span>`
             : (order.isPaid ? `<button onclick="toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800/30 uppercase tracking-wider hover:bg-emerald-100"><i data-lucide="check" class="w-3 h-3"></i> Paid</button>`
-                : ((order.amountPaid || 0) > 0 ? `<button onclick="toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-800/30 uppercase tracking-wider hover:bg-amber-100"><i data-lucide="clock" class="w-3 h-3"></i> Bal: ₱ ${due.toFixed(0)}</button>`
+                : ((order.amountPaid || 0) > 0 ? `<button onclick="toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-800/30 uppercase tracking-wider hover:bg-amber-100"><i data-lucide="clock" class="w-3 h-3"></i> Bal: ₱ ${due.toFixed(2)}</button>`
                     : `<button onclick="toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-800/30 uppercase tracking-wider hover:bg-rose-100"><i data-lucide="alert-circle" class="w-3 h-3"></i> Unpaid</button>`));
         
         const delBtn = isCancelled ? `<span class="text-slate-400 font-bold text-xl">-</span>` 
             : (order.isReceived ? `<button onclick="toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 uppercase tracking-wider"><i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-500"></i> Delivered</button>`
-                : `<button onclick="toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-white dark:bg-slate-900 text-slate-500 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-50 uppercase tracking-wider"><i data-lucide="truck" class="w-3.5 h-3.5 text-amber-500"></i> Pending</button>`);
+                : `<button onclick="toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-white dark:bg-slate-900 text-slate-500 rounded-lg border border-slate-200/70 shadow-sm hover:bg-slate-50 uppercase tracking-wider"><i data-lucide="truck" class="w-3.5 h-3.5 text-amber-500"></i> Pending</button>`);
 
         const editBadge = order.isEdited && !isCancelled ? `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 align-middle">Edited</span>` : '';
-        
+        const itemsListStr = getOrderItems(order).map(i => `${i.qty}x ${i.name}`).join(', ');
+
         let actionHtml = `<button onclick="generateReceipt('${order.id}')" title="Receipt" class="p-2 sm:p-2.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
         
-        if(!isCancelled && !isLocked) {
-            actionHtml += `<button onclick="editOrder('${order.id}')" title="Edit" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button><button onclick="cancelOrder('${order.id}')" title="Cancel Order" class="p-2 sm:p-2.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
-        } else if (isLocked && !isCancelled) {
-            actionHtml += `<span title="Locked (Paid/Delivered)" class="p-2 sm:p-2.5 text-slate-300 dark:text-slate-600 cursor-not-allowed"><i data-lucide="lock" class="w-4 h-4"></i></span>`;
+        if(!isCancelled && !order.isPaid) {
+            actionHtml += `<button onclick="editOrder('${order.id}')" title="Edit Basket Contents" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button><button onclick="cancelOrder('${order.id}')" title="Cancel Order" class="p-2 sm:p-2.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
+        } else if (order.isPaid && !isCancelled) {
+            actionHtml += `<span title="Locked Receipt (Paid)" class="p-2 sm:p-2.5 text-slate-300 dark:text-slate-600 cursor-not-allowed"><i data-lucide="lock" class="w-4 h-4"></i></span>`;
         }
 
         if (isCancelled) {
@@ -1228,9 +1467,9 @@ function renderOrdersTable() {
 
         list.innerHTML += `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${isCancelled ? 'opacity-50 grayscale bg-slate-50/30 dark:bg-slate-900/20' : ''}">
-                <td class="py-3 px-4 sm:px-5"><div class="flex flex-col"><div class="font-black text-sm text-slate-900 dark:text-white">${order.customerName}${editBadge}</div><span class="text-[11px] text-slate-500 font-bold mt-0.5">${order.orderQty}x ${order.itemName}</span><span class="text-[9px] text-slate-400 mt-1 font-semibold tracking-wide uppercase">${order.id} • ${order.date || "N/A"}</span></div></td>
+                <td class="py-3 px-4 sm:px-5"><div class="flex flex-col"><div class="font-black text-sm text-slate-900 dark:text-white">${order.customerName}${editBadge}</div><span class="text-[9px] text-slate-400 mt-1 font-semibold tracking-wide uppercase">${order.id} • ${order.date || "N/A"}</span></div></td>
+                <td class="py-3 px-3 sm:px-4 text-xs font-medium text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title="${itemsListStr}">${itemsListStr}</td>
                 <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400 tracking-tight ${isCancelled?'line-through':''}">₱ ${order.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td class="py-3 px-3 sm:px-4 text-right font-black text-emerald-600 dark:text-emerald-400 tracking-tight ${isCancelled?'line-through text-slate-400 dark:text-slate-500':''}">₱ ${order.totalProfit.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 <td class="py-3 px-3 sm:px-4 text-center">${pBadge}</td>
                 <td class="py-3 px-3 sm:px-4 text-center">${delBtn}</td>
                 <td class="py-3 px-4 sm:px-5 text-right"><div class="flex items-center justify-end gap-1 sm:gap-1.5">${actionHtml}</div></td>
@@ -1239,7 +1478,49 @@ function renderOrdersTable() {
     }); initIcons();
 }
 
-// ================= REDESIGNED SUPPLIER ACCOUNTS PAYABLE & MODULE =================
+// ================= SUPPLIER ACCOUNTS PAYABLE & PURCHASES MODULE =================
+
+function filterSuppliers() {
+    const input = document.getElementById('bnpl-supplier');
+    const dropdown = document.getElementById('supplier-dropdown');
+    if(!input || !dropdown) return;
+
+    const query = input.value.trim().toLowerCase();
+    const distinctSuppliers = [...new Set(bnplRecords.map(b => b.supplierName))].filter(Boolean);
+    dropdown.innerHTML = '';
+
+    const matches = distinctSuppliers.filter(s => s.toLowerCase().includes(query));
+    if (matches.length > 0) {
+        matches.forEach(s => {
+            const block = document.createElement('div');
+            block.className = "px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors";
+            block.innerText = s;
+            block.onmousedown = () => {
+                input.value = s;
+                dropdown.classList.add('hidden');
+            };
+            dropdown.appendChild(block);
+        });
+        dropdown.classList.remove('hidden');
+        dropdown.classList.add('flex');
+    } else {
+        dropdown.classList.add('hidden');
+        dropdown.classList.remove('flex');
+    }
+}
+
+function createNewBatchPrompt() {
+    const batchName = prompt("Enter custom batch name/identifier:");
+    if (batchName && batchName.trim()) {
+        const select = document.getElementById('bnpl-batch-number');
+        const opt = document.createElement('option');
+        opt.value = batchName.trim();
+        opt.innerText = batchName.trim();
+        opt.selected = true;
+        select.appendChild(opt);
+        showToast("Custom batch identifier created", "success");
+    }
+}
 
 function searchBatchItem() {
     const input = document.getElementById('batch-item-search');
@@ -1254,7 +1535,7 @@ function searchBatchItem() {
         matches.forEach(item => {
             const row = document.createElement('div');
             row.className = "px-4 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 flex justify-between";
-            row.innerHTML = `<span>${item.name}</span><span class="text-[10px] text-slate-400 font-bold">RRP: ₱ ${(item.sellPrice || 0).toFixed(2)}</span>`;
+            row.innerHTML = `<span>${item.name}</span><span class="text-[10px] text-slate-400 font-bold">Price: ₱ ${(item.sellPrice || 0).toFixed(2)}</span>`;
             row.onmousedown = () => { 
                 input.value = item.name; 
                 dropdown.classList.add('hidden'); 
@@ -1278,7 +1559,7 @@ function runBatchMetricsCalc() {
     const cppEl = document.getElementById('preview-cpp');
     const spEl = document.getElementById('preview-sp');
     const pppEl = document.getElementById('preview-ppp');
-    const totalProfitEl = document.getElementById('preview-total-profit');
+    const marginEl = document.getElementById('preview-margin');
 
     if(!name || qty <= 0 || cost <= 0) {
         previewBlock.classList.add('hidden');
@@ -1289,76 +1570,16 @@ function runBatchMetricsCalc() {
     const invMatch = inventory.find(i => i.name.toLowerCase() === name.toLowerCase());
     const sp = invMatch ? (invMatch.sellPrice || 0) : 0;
     const profitPerPc = sp - cpp;
-    const estimatedTotalProfit = profitPerPc * qty;
+    const margin = sp > 0 ? ((profitPerPc / sp) * 100) : 0;
 
     cppEl.innerText = cpp.toFixed(2);
     spEl.innerText = sp.toFixed(2);
     pppEl.innerText = profitPerPc.toFixed(2);
-    totalProfitEl.innerText = estimatedTotalProfit.toFixed(2);
+    marginEl.innerText = margin.toFixed(2);
 
     previewBlock.classList.remove('hidden');
 }
 
-function queueItemToBatch() {
-    const name = document.getElementById('batch-item-search').value.trim();
-    const qty = parseInt(document.getElementById('batch-item-qty').value) || 0;
-    const cost = parseFloat(document.getElementById('batch-item-cost').value) || 0;
-
-    if(!name) { showToast("Enter product name", "error"); return; }
-    if(qty <= 0) { showToast("Quantity must be greater than zero", "error"); return; }
-    if(cost <= 0) { showToast("Total cost must be greater than zero", "error"); return; }
-
-    const cpp = cost / qty;
-    const invMatch = inventory.find(i => i.name.toLowerCase() === name.toLowerCase());
-    const sellingPrice = invMatch ? (invMatch.sellPrice || 0) : 0;
-
-    currentBatchItems.push({
-        itemName: name,
-        qty: qty,
-        totalCost: cost,
-        costPerPiece: cpp,
-        sellingPrice: sellingPrice
-    });
-
-    document.getElementById('batch-item-search').value = '';
-    document.getElementById('batch-item-qty').value = '';
-    document.getElementById('batch-item-cost').value = '';
-    document.getElementById('batch-item-preview').classList.add('hidden');
-
-    renderCurrentBatchQueue();
-    updateTotalSupplierBatchCost();
-}
-
-function removeQueuedBatchItem(index) {
-    currentBatchItems.splice(index, 1);
-    renderCurrentBatchQueue();
-    updateTotalSupplierBatchCost();
-}
-
-function renderCurrentBatchQueue() {
-    const container = document.getElementById('queued-batch-items');
-    container.innerHTML = '';
-
-    currentBatchItems.forEach((item, index) => {
-        container.innerHTML += `
-            <div class="flex justify-between items-center bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm text-xs text-slate-700 dark:text-slate-300">
-                <div class="flex flex-col">
-                    <span class="font-bold text-slate-900 dark:text-white">${item.itemName}</span>
-                    <span class="text-[10px] text-slate-400 font-medium">Qty: ${item.qty} • Total: ₱ ${item.totalCost.toFixed(2)} • CPP: ₱ ${item.costPerPiece.toFixed(2)}</span>
-                </div>
-                <button type="button" onclick="removeQueuedBatchItem(${index})" class="text-rose-500 hover:text-rose-700 p-1 bg-rose-50 dark:bg-rose-950/30 rounded btn-transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-            </div>
-        `;
-    });
-    initIcons();
-}
-
-function updateTotalSupplierBatchCost() {
-    const sum = currentBatchItems.reduce((acc, curr) => acc + curr.totalCost, 0);
-    document.getElementById('bnpl-total-cost').innerText = `₱ ${sum.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-}
-
-// Global shared abstraction helper to add physical quantities inside current workspace safely
 function commitBatchItemsToInventory(items) {
     items.forEach(item => {
         const existingIndex = inventory.findIndex(inv => inv.name.toLowerCase() === item.itemName.toLowerCase());
@@ -1377,20 +1598,24 @@ function commitBatchItemsToInventory(items) {
 
         if(existingIndex > -1) {
             const existing = inventory[existingIndex];
-            const newQty = existing.stockQty + addedQty;
+            const currentStock = existing.stockQty || 0;
+            const currentCPP = existing.unitCost || 0;
             
-            const existingValue = existing.stockQty * (existing.unitCost || 0);
-            const weightedCost = newQty > 0 ? ((existingValue + itemCost) / newQty) : item.costPerPiece;
-
-            existing.stockQty = newQty;
-            existing.unitCost = weightedCost;
+            const existingTotalValue = currentStock * currentCPP;
+            const newTotalValue = existingTotalValue + itemCost;
+            const combinedStockCount = currentStock + addedQty;
+            
+            existing.unitCost = combinedStockCount > 0 ? (newTotalValue / combinedStockCount) : item.costPerPiece;
+            existing.stockQty = combinedStockCount;
         } else {
             inventory.push({
                 id: Date.now().toString() + Math.random().toString(36).substr(2, 3),
                 name: item.itemName,
                 unitCost: item.costPerPiece,
                 sellPrice: item.sellingPrice || item.costPerPiece * 1.25, 
-                stockQty: addedQty
+                stockQty: addedQty,
+                recCppMin: 0,
+                recCppMax: 0
             });
         }
     });
@@ -1401,49 +1626,139 @@ function commitBatchItemsToInventory(items) {
 function handleSupplierPurchaseSubmit(e) {
     e.preventDefault();
     const supplier = document.getElementById('bnpl-supplier').value.trim();
-    const invoice = document.getElementById('bnpl-invoice').value.trim();
     const purchaseDate = document.getElementById('bnpl-purchasedate').value;
     const dueDate = document.getElementById('bnpl-duedate').value;
+    const batchNumber = document.getElementById('bnpl-batch-number').value;
+    const prodName = document.getElementById('batch-item-search').value.trim();
+    const qty = parseInt(document.getElementById('batch-item-qty').value) || 0;
+    const totalCost = parseFloat(document.getElementById('batch-item-cost').value) || 0;
     const notes = document.getElementById('bnpl-notes').value.trim() || 'N/A';
     const inventoryReceived = document.getElementById('bnpl-received-checkbox').checked;
 
-    if(currentBatchItems.length === 0) {
-        showToast("Your purchase batch must contain at least 1 item", "error");
+    if(qty <= 0 || totalCost <= 0 || !prodName) {
+        showToast("Please provide valid quantity, cost, and product details.", "error");
         return;
     }
 
-    const totalAmount = currentBatchItems.reduce((acc, curr) => acc + curr.totalCost, 0);
+    const cpp = totalCost / qty;
+    const invMatch = inventory.find(i => i.name.toLowerCase() === prodName.toLowerCase());
+    const sellingPrice = invMatch ? (invMatch.sellPrice || 0) : 0;
+
+    const singleBatchItem = [{
+        itemName: prodName,
+        qty: qty,
+        totalCost: totalCost,
+        costPerPiece: cpp,
+        sellingPrice: sellingPrice
+    }];
 
     const newRecord = {
         id: 'AP-' + Date.now().toString().slice(-6),
         supplierName: supplier,
-        invoiceNumber: invoice,
+        invoiceNumber: batchNumber, 
         purchaseDate: purchaseDate,
         dueDate: dueDate,
         notes: notes,
-        items: currentBatchItems,
-        totalAmount: totalAmount,
+        items: singleBatchItem,
+        totalAmount: totalCost,
         amountPaid: 0,
         payments: [], 
         isReceived: inventoryReceived,
+        receivedDate: inventoryReceived ? new Date().toISOString() : null,
         status: 'unpaid'
     };
 
     if (inventoryReceived) {
-        commitBatchItemsToInventory(currentBatchItems);
+        commitBatchItemsToInventory(singleBatchItem);
     }
 
     bnplRecords.push(newRecord);
     saveBnpl();
 
-    currentBatchItems = [];
     document.getElementById('bnpl-form').reset();
-    document.getElementById('bnpl-total-cost').innerText = '₱ 0.00';
-    document.getElementById('queued-batch-items').innerHTML = '';
+    document.getElementById('batch-item-preview').classList.add('hidden');
     initDateDefaults();
     
     renderBnplUI();
     showToast("Supplier purchase logged successfully", "success");
+}
+
+function openSupplierPurchaseEdit(id) {
+    const record = bnplRecords.find(b => b.id === id);
+    if (!record) return;
+
+    document.getElementById('edit-bnpl-id').value = record.id;
+    document.getElementById('edit-bnpl-supplier-name').value = record.supplierName;
+    document.getElementById('edit-bnpl-invoice-number').value = record.invoiceNumber || '';
+    document.getElementById('edit-bnpl-purchase-date').value = record.purchaseDate || '';
+    document.getElementById('edit-bnpl-due-date').value = record.dueDate || '';
+    document.getElementById('edit-bnpl-notes-field').value = record.notes === 'N/A' ? '' : record.notes;
+
+    openModal('supplier-purchase-edit-modal');
+}
+
+function saveSupplierPurchaseEdit(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit-bnpl-id').value;
+    const record = bnplRecords.find(b => b.id === id);
+
+    if (record) {
+        record.supplierName = document.getElementById('edit-bnpl-supplier-name').value.trim();
+        record.invoiceNumber = document.getElementById('edit-bnpl-invoice-number').value.trim();
+        record.purchaseDate = document.getElementById('edit-bnpl-purchase-date').value;
+        record.dueDate = document.getElementById('edit-bnpl-due-date').value;
+        record.notes = document.getElementById('edit-bnpl-notes-field').value.trim() || 'N/A';
+
+        saveBnpl();
+        closeModal('supplier-purchase-edit-modal');
+        renderBnplUI();
+        showToast("Supplier purchase modified", "success");
+    }
+}
+
+function deleteSupplierPurchase(id) {
+    const record = bnplRecords.find(b => b.id === id);
+    if (!record) return;
+
+    const proceedDeletion = () => {
+        if (record.isReceived) {
+            record.items.forEach(item => {
+                const matchedItem = inventory.find(i => i.name.toLowerCase() === item.itemName.toLowerCase());
+                if (matchedItem) {
+                    const currentStock = matchedItem.stockQty || 0;
+                    const currentCPP = matchedItem.unitCost || 0;
+                    
+                    const originalValue = currentStock * currentCPP;
+                    const removedValue = item.totalCost;
+                    const balancedStockCount = Math.max(0, currentStock - item.qty);
+                    
+                    matchedItem.unitCost = balancedStockCount > 0 ? (Math.max(0, originalValue - removedValue) / balancedStockCount) : 0;
+                    matchedItem.stockQty = balancedStockCount;
+                }
+            });
+            saveInventory();
+        }
+        bnplRecords = bnplRecords.filter(b => b.id !== id);
+        saveBnpl();
+        renderBnplUI();
+        showToast("Supplier purchase record successfully deleted", "info");
+    };
+
+    if (record.isReceived) {
+        requestUserConfirmation(
+            "Delete Supplier Purchase", 
+            "This supplier purchase has already added inventory. Deleting it will also remove the inventory added by this purchase. Do you want to continue?", 
+            "Delete", 
+            proceedDeletion
+        );
+    } else {
+        requestUserConfirmation(
+            "Delete Supplier Purchase", 
+            "Are you sure you want to delete this pending supplier purchase?", 
+            "Delete", 
+            proceedDeletion
+        );
+    }
 }
 
 function openApPaymentModal(id) {
@@ -1524,22 +1839,12 @@ function receiveSupplierStockBatch(id) {
     const bill = bnplRecords.find(b => b.id === id);
     if(!bill || bill.isReceived) return;
 
-    if(confirm(`Receive stock batch from ${bill.supplierName}?\nThis will permanently update your inventory and restock history.`)) {
-        commitBatchItemsToInventory(bill.items);
-        bill.isReceived = true;
-        saveBnpl();
-        renderBnplUI();
-        showToast("Active inventory updated", "success");
-    }
-}
-
-function deleteSupplierPurchase(id) {
-    if(confirm("Permanently wipe supplier purchase entry?\nNote: Inventory stock levels will remain unchanged.")) {
-        bnplRecords = bnplRecords.filter(b => b.id !== id);
-        saveBnpl();
-        renderBnplUI();
-        showToast("Supplier invoice removed", "success");
-    }
+    commitBatchItemsToInventory(bill.items);
+    bill.isReceived = true;
+    bill.receivedDate = new Date().toISOString();
+    saveBnpl();
+    renderBnplUI();
+    showToast("Active inventory updated", "success");
 }
 
 function setBnplHistoryFilter(f) {
@@ -1552,28 +1857,6 @@ function setBnplHistoryFilter(f) {
         }
     });
     renderBnplTable();
-}
-
-function renderBnplUI() {
-    renderBnplTable();
-    renderBatchMatrixTable();
-    
-    let absoluteCollectedPOSCash = 0;
-    orders.forEach(o => { if(o.status !== 'cancelled') absoluteCollectedPOSCash += (o.amountPaid || 0); });
-
-    let unpaidCommitments = 0;
-    let paidCommitments = 0;
-
-    bnplRecords.forEach(b => {
-        unpaidCommitments += (b.totalAmount - (b.amountPaid || 0));
-        paidCommitments += (b.amountPaid || 0);
-    });
-
-    let pureLiquidPool = absoluteCollectedPOSCash - paidCommitments;
-
-    document.getElementById('cashflow-liquid-pool').innerText = pureLiquidPool.toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('cashflow-unpaid-bnpl').innerText = unpaidCommitments.toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('cashflow-paid-bnpl').innerText = paidCommitments.toLocaleString(undefined, {minimumFractionDigits: 2});
 }
 
 function renderBnplTable() {
@@ -1607,7 +1890,8 @@ function renderBnplTable() {
 
         let receivedAction = '';
         if(b.isReceived) {
-            receivedAction = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-lg"><i data-lucide="package-check" class="w-3 h-3"></i> Stocks Loaded</span>`;
+            const rDate = b.receivedDate ? new Date(b.receivedDate).toLocaleDateString() : '';
+            receivedAction = `<div class="flex flex-col items-center"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-lg"><i data-lucide="package-check" class="w-3 h-3"></i> Stocks Loaded</span><span class="text-[9px] text-slate-400 mt-0.5">${rDate}</span></div>`;
         } else {
             receivedAction = `<button onclick="receiveSupplierStockBatch('${b.id}')" title="Load Quantities to Inventory" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase rounded-lg transition-colors border border-indigo-100 dark:border-indigo-800/30 btn-transition flex items-center gap-1"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Receive Stocks</button>`;
         }
@@ -1616,7 +1900,7 @@ function renderBnplTable() {
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                 <td class="py-3 px-4">
                     <div class="font-black text-slate-900 dark:text-white text-xs">${b.supplierName}</div>
-                    <div class="text-[10px] font-bold text-slate-400 mt-0.5">Inv: ${b.invoiceNumber || 'N/A'}</div>
+                    <div class="text-[10px] font-bold text-slate-400 mt-0.5">Batch: ${b.invoiceNumber || 'N/A'}</div>
                 </td>
                 <td class="py-3 px-3 text-xs">
                     <div class="text-slate-500">Pur: ${b.purchaseDate}</div>
@@ -1638,6 +1922,7 @@ function renderBnplTable() {
                     <div class="flex items-center justify-end gap-1.5">
                         ${unpaidBal > 0.01 ? `<button onclick="openApPaymentModal('${b.id}')" title="Record AP Payment Balance" class="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-lg border border-emerald-100 dark:border-emerald-800/30 btn-transition"><i data-lucide="coins" class="w-4 h-4"></i></button>` : ''}
                         <button onclick="viewPaymentHistory('${b.id}')" title="View Payment History" class="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-lg border border-indigo-100 dark:border-indigo-800/30 btn-transition"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                        <button onclick="openSupplierPurchaseEdit('${b.id}')" title="Modify Invoice Fields" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button>
                         <button onclick="deleteSupplierPurchase('${b.id}')" title="Delete Invoice Record" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 </td>
@@ -1660,9 +1945,11 @@ function renderBatchMatrixTable() {
 
     orders.forEach(o => {
         if(o.status === 'cancelled') return;
-        let name = o.itemName;
-        if(!productMap[name]) productMap[name] = { spent: 0, sold: 0 };
-        productMap[name].sold += (o.totalRevenue || 0);
+        getOrderItems(o).forEach(i => {
+            let name = i.name;
+            if(!productMap[name]) productMap[name] = { spent: 0, sold: 0 };
+            productMap[name].sold += (i.effectiveTotal || 0);
+        });
     });
 
     let entries = Object.keys(productMap);
@@ -1680,7 +1967,7 @@ function renderBatchMatrixTable() {
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                 <td class="py-3 px-5 font-bold text-slate-900 dark:text-white">${name}</td>
                 <td class="py-3 px-4 text-right font-semibold text-amber-600 dark:text-amber-400">₱ ${spent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="py-3 px-4 text-right font-semibold text-indigo-600 dark:text-indigo-400">₱ ${sold.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="py-3 px-4 text-right font-semibold text-indigo-600 dark:text-indigo-400">₱ ${spent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 <td class="py-3 px-5 text-right font-black ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">₱ ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
             </tr>
         `;
@@ -1692,7 +1979,13 @@ function generateReceipt(orderId) {
     const order = orders.find(o => o.id === orderId); if (!order) return;
     const paidVal = order.amountPaid !== undefined ? order.amountPaid : (order.isPaid ? order.totalRevenue : 0);
     const statusLine = order.status === 'cancelled' ? 'VOID/CANCELLED' : (order.isPaid ? 'FULLY PAID' : (paidVal > 0 ? `PARTIAL (₱ ${(order.totalRevenue - paidVal).toFixed(2)} Bal)` : 'UNPAID'));
-    document.getElementById('receipt-text').innerText = `================================\n      CHEOREOBIZ INVOICE\n================================\nDate: ${order.date || "N/A"}\nTxn : ${order.id}\n${order.isEdited ? '(Invoice reflects edited items)\n' : ''}Billed To: ${order.customerName}\nItem:      ${order.itemName}\nQuantity:  ${order.orderQty} pcs\n\n--------------------------------\nSubtotal:           ₱ ${order.totalRevenue.toFixed(2)}\nAmount Paid:        ₱ ${paidVal.toFixed(2)}\nBalance Due:        ₱ ${(order.totalRevenue - paidVal).toFixed(2)}\n--------------------------------\nPayment:  ${statusLine}\nDelivery: ${order.isReceived ? 'Fulfilled' : 'Pending'}\n\nThank you for your business!\n================================`;
+    
+    let itemsInvoiceMatrix = '';
+    getOrderItems(order).forEach(i => {
+        itemsInvoiceMatrix += `${i.name.padEnd(18)} x${i.qty.toString().padEnd(2)} ₱ ${i.effectiveTotal.toFixed(2).padStart(8)}\n`;
+    });
+
+    document.getElementById('receipt-text').innerText = `================================\n      CHEOREOBIZ INVOICE\n================================\nDate: ${order.date || "N/A"}\nTxn : ${order.id}\n${order.isEdited ? '(Invoice reflects edited items)\n' : ''}Billed To: ${order.customerName}\n\nLine Items:\n--------------------------------\n${itemsInvoiceMatrix}--------------------------------\nGrand Total:        ₱ ${order.totalRevenue.toFixed(2).padStart(10)}\nAmount Paid:        ₱ ${paidVal.toFixed(2).padStart(10)}\nBalance Due:        ₱ ${(order.totalRevenue - paidVal).toFixed(2).padStart(10)}\n--------------------------------\nPayment:  ${statusLine}\nDelivery: ${order.isReceived ? 'Fulfilled' : 'Pending'}\n\nThank you for your business!\n================================`;
     openModal('receipt-modal');
 }
 
@@ -1700,8 +1993,11 @@ function copyReceiptToClipboard() { navigator.clipboard.writeText(document.getEl
 
 function exportToCSV() {
     if (orders.length === 0) { showToast("No records to export", "error"); return; }
-    let csv = "data:text/csv;charset=utf-8,Date,ID,Customer,Item,Quantity,Sales,Cost,Profit,Paid,Status,Delivery,Edited\r\n";
-    orders.forEach(o => { csv += `"${o.date||'N/A'}","${o.id}","${o.customerName.replace(/"/g, '""')}","${o.itemName.replace(/"/g, '""')}",${o.orderQty},${o.totalRevenue},${o.totalCost},${o.totalProfit},${o.amountPaid||0},${o.status === 'cancelled' ? 'Cancelled' : (o.isPaid ? 'Paid' : 'Due')},${o.isReceived ? 'Delivered' : 'Pending'},${o.isEdited?'Yes':'No'}\r\n`; });
+    let csv = "data:text/csv;charset=utf-8,Date,ReceiptID,Customer,ItemsSummary,TotalRevenue,TotalCost,TotalProfit,Paid,Status,Delivery,Edited\r\n";
+    orders.forEach(o => { 
+        const itemsSummaryLine = getOrderItems(o).map(i => `${i.qty}x${i.name}`).join(' | ');
+        csv += `"${o.date||'N/A'}","${o.id}","${o.customerName.replace(/"/g, '""')}","${itemsSummaryLine.replace(/"/g, '""')}",${o.totalRevenue},${o.totalCost},${o.totalProfit},${o.amountPaid||0},${o.status === 'cancelled' ? 'Cancelled' : (o.isPaid ? 'Paid' : 'Due')},${o.isReceived ? 'Delivered' : 'Pending'},${o.isEdited?'Yes':'No'}\r\n`; 
+    });
     const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `cheoreobiz_report_${new Date().toISOString().split('T')[0]}.csv`; document.body.appendChild(a); a.click(); a.remove();
 }
 
