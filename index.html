@@ -231,7 +231,7 @@
                             <div class="absolute -right-4 -top-4 text-rose-500/5 group-hover:text-rose-500/10 transition-colors"><i data-lucide="clock-4" class="w-32 h-32 sm:w-40 sm:h-40"></i></div>
                             <div class="flex items-center justify-between mb-2 sm:mb-4 relative z-10">
                                 <span class="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Outstanding Bal.</span>
-                                <div class="p-1.5 sm:p-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl"><i data-lucide="clock-4" class="w-4 h-4 safe:w-5 h-5"></i></div>
+                                <div class="p-1.5 sm:p-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl"><i data-lucide="clock-4" class="w-4 h-4 text-rose-600 dark:text-rose-400"></i></div>
                             </div>
                             <div class="flex items-center text-rose-600 dark:text-rose-400 relative z-10"><span class="text-sm sm:text-xl font-bold opacity-50 mr-1"> </span><span id="stat-pending-balance" class="text-2xl sm:text-4xl font-black tracking-tight truncate">0.00</span></div>
                         </div>
@@ -556,19 +556,28 @@
                         </div>
                     </div>
 
+                    <!-- REENGINIERED SALES HISTORY TRACKING UTILITY SYSTEM WITH FILTER TABS & INSTANT SORT HEADERS -->
                     <div class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm flex flex-col overflow-hidden">
-                        <div class="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-700/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/50 dark:bg-slate-900/20">
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
-                                <h2 class="text-base font-black flex items-center gap-2 text-slate-900 dark:text-white">
+                        <div class="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-700/60 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-slate-50/50 dark:bg-slate-900/20">
+                            <div class="flex flex-col md:flex-row md:items-center gap-3 w-full xl:w-auto">
+                                <h2 class="text-base font-black flex items-center gap-2 text-slate-900 dark:text-white flex-shrink-0">
                                     <i data-lucide="file-clock" class="w-5 h-5 text-indigo-500"></i> Sale History Log
                                 </h2>
-                                <div class="flex bg-slate-200/50 dark:bg-slate-700/50 p-1 rounded-lg border border-slate-200/50 dark:border-slate-600/50">
-                                    <button onclick="setOrderTab('active')" id="tab-active-orders" class="px-4 py-1.5 text-[11px] uppercase tracking-wider font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-slate-800 dark:text-white transition-all flex-1 text-center">Active</button>
-                                    <button onclick="setOrderTab('cancelled')" id="tab-cancelled-orders" class="px-4 py-1.5 text-[11px] uppercase tracking-wider font-bold rounded-md text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all flex-1 text-center">Cancelled</button>
+                                <!-- Redesigned segmented modern pill filter tabs -->
+                                <div class="flex bg-slate-100 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/60 w-full md:w-auto overflow-x-auto no-scrollbar">
+                                    <button onclick="setOrderTab('all')" id="tab-all-orders" class="flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs hover:text-slate-900 transition-all duration-200 whitespace-nowrap">All</button>
+                                    <button onclick="setOrderTab('active')" id="tab-active-orders" class="flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-200 whitespace-nowrap">Open Orders</button>
+                                    <button onclick="setOrderTab('completed')" id="tab-completed-orders" class="flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-200 whitespace-nowrap">Completed</button>
+                                    <button onclick="setOrderTab('cancelled')" id="tab-cancelled-orders" class="flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-200 whitespace-nowrap">Cancelled</button>
                                 </div>
                             </div>
 
-                            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-start md:justify-end">
+                            <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-start xl:justify-end">
+                                <!-- Integrated Client-Side Search Compatibility Input Viewfield -->
+                                <div class="relative w-full sm:max-w-xs group">
+                                    <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                                    <input type="text" id="history-search" oninput="renderOrdersTable()" placeholder="Search customer or receipt..." class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-9 pr-4 text-xs font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder:text-slate-400">
+                                </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden sm:inline">Show:</span>
                                     <select id="rows-per-page-select" onchange="changeRowsPerPage()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
@@ -578,31 +587,35 @@
                                         <option value="50">50</option>
                                     </select>
                                 </div>
-                                <select id="order-sorter" onchange="applyOrderSorting()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
-                                    <option value="newest">Latest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                    <option value="customer">Customer (A-Z)</option>
-                                </select>
-                                <div id="active-filters" class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-[11px] font-bold border border-slate-200 dark:border-slate-700">
-                                    <button onclick="applyOrderFilter('all')" data-filter-btn="all" class="px-3 py-1.5 rounded bg-white dark:bg-slate-700 shadow-sm transition-all text-slate-800 dark:text-white uppercase tracking-wider">All</button>
-                                    <button onclick="applyOrderFilter('unpaid')" data-filter-btn="unpaid" class="px-3 py-1.5 rounded text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all uppercase tracking-wider">Unpaid</button>
-                                    <button onclick="applyOrderFilter('pending')" data-filter-btn="pending" class="px-3 py-1.5 rounded text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all uppercase tracking-wider">Pending</button>
-                                </div>
                                 <button onclick="exportToCSV()" class="btn-transition flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 px-3 py-2 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800/30">
                                     <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Ex<span class="hidden sm:inline">port</span>
                                 </button>
                             </div>
                         </div>
                         <div class="overflow-x-auto min-h-[300px] custom-scrollbar">
-                            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed">
                                 <thead class="bg-slate-50 dark:bg-slate-900/50">
-                                    <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                                        <th class="py-3 px-4 sm:px-5">Receipt Details</th>
-                                        <th class="py-3 px-3 sm:px-4">Baskets Summary</th>
-                                        <th class="py-3 px-3 sm:px-4 text-right">Grand Total</th>
-                                        <th class="py-3 px-3 sm:px-4 text-center">Payment</th>
-                                        <th class="py-3 px-3 sm:px-4 text-center">Delivery</th>
-                                        <th class="py-3 px-4 sm:px-5 text-right">Actions</th>
+                                    <!-- Realigned Header Columns - Perfectly lining up with data rows -->
+                                    <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase whitespace-nowrap select-none">
+                                        <th onclick="toggleOrderSort('customer')" class="w-[20%] py-3.5 px-4 sm:px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                            <div class="flex items-center gap-1">Customer Name <span id="sort-icon-customer" class="text-indigo-500 font-bold"></span></div>
+                                        </th>
+                                        <th onclick="toggleOrderSort('date')" class="w-[15%] py-3.5 px-3 sm:px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                            <div class="flex items-center gap-1">Date & Time <span id="sort-icon-date" class="text-indigo-500 font-bold"></span></div>
+                                        </th>
+                                        <th class="w-[25%] py-3.5 px-3 sm:px-4 text-left">
+                                            <div class="flex items-center gap-1">Items</div>
+                                        </th>
+                                        <th onclick="toggleOrderSort('total')" class="w-[13%] py-3.5 px-3 sm:px-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                            <div class="flex items-center justify-end gap-1">Grand Total <span id="sort-icon-total" class="text-indigo-500 font-bold"></span></div>
+                                        </th>
+                                        <th onclick="toggleOrderSort('payment')" class="w-[12%] py-3.5 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                            <div class="flex items-center justify-center gap-1">Payment Status <span id="sort-icon-payment" class="text-indigo-500 font-bold"></span></div>
+                                        </th>
+                                        <th onclick="toggleOrderSort('delivery')" class="w-[12%] py-3.5 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                            <div class="flex items-center justify-center gap-1">Delivery Status <span id="sort-icon-delivery" class="text-indigo-500 font-bold"></span></div>
+                                        </th>
+                                        <th class="w-[8%] py-3.5 px-4 sm:px-5 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="orders-list" class="divide-y divide-slate-100 dark:divide-slate-700/50 text-sm"></tbody>
@@ -892,7 +905,7 @@
                     </div>
                     <div class="space-y-1.5 opacity-60">
                         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Average CPP (Read-Only)</label>
-                        <input type="number" id="edit-stock-cost" readonly min="0" step="0.01" class="w-full bg-slate-200 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-black outline-none cursor-not-allowed text-right">
+                        <input type="number" id="edit-stock-cost" readonly min="0" step="0.01" class="w-full bg-slate-200 dark:bg-slate-300 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-black outline-none cursor-not-allowed text-right">
                     </div>
                 </div>
 
@@ -932,6 +945,7 @@
         </div>
     </div>
 
+    <!-- Receipt Modal -->
     <div id="receipt-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 glass-panel hidden opacity-0 transition-opacity duration-200" onclick="closeModalOnBackdrop(event, 'receipt-modal')">
         <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden transform scale-95 transition-transform duration-200">
             <div class="p-5 border-b border-slate-200/80 dark:border-slate-700/60 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/20">
