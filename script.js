@@ -22,8 +22,7 @@ let stockHistory = [];
 let bnplRecords = []; 
 
 let currentFilter = 'all'; 
-let currentSort = 'newest';
-let currentOrderTab = 'active'; 
+let currentOrderTab = 'all'; // Changed default tab target state to support unified lifecycle hook filters
 let dashboardTimeframe = 'all';
 let ordersPerPage = 10;
 let currentOrdersPage = 1;
@@ -39,6 +38,13 @@ let confirmProceedCallback = null;
 
 // Persistent Transaction Edit Session State
 let editingOrderId = null;
+
+// POS Table Header Click Sorting Session Coordinates
+let orderSortColumn = null;    // Tracks column keys: 'id', 'customer', 'date', 'total', 'payment', 'delivery'
+let orderSortDirection = 'none'; // Alternates through: 'none', 'asc', 'desc'
+
+const itemNameInput = document.getElementById('item-name');
+const customDropdown = document.getElementById('custom-dropdown');
 
 // Global layout action listeners
 document.addEventListener('click', (e) => {
@@ -187,7 +193,6 @@ function getOrderItems(order) {
     if (order.items && Array.isArray(order.items)) {
         return order.items;
     }
-    // Return adaptive mapped structure representation for legacy entries smoothly
     return [{
         id: order.itemId || "legacy-id",
         name: order.itemName || "Unknown Product",
@@ -280,12 +285,6 @@ function handleLogin(e) {
     auth.signInWithEmailAndPassword(email, password).then(() => showToast('Signed in successfully', 'success')).catch(() => document.getElementById('auth-error').classList.remove('hidden'));
 }
 
-function handleLogout() {
-    requestUserConfirmation("Sign Out", "Are you sure you want to log out of your session?", "Sign Out", () => {
-        auth.signOut().then(() => window.location.reload());
-    });
-}
-
 // ================= DATABASE WRAPPERS =================
 function saveInventory() { db.ref('inventory').set(inventory); }
 function saveOrders() { db.ref('orders').set(orders); }
@@ -322,6 +321,12 @@ function startRealtimeSync() {
     });
 }
 
+function handleLogout() {
+    requestUserConfirmation("Sign Out", "Are you sure you want to log out of your session?", "Sign Out", () => {
+        auth.signOut().then(() => window.location.reload());
+    });
+}
+
 function renderUI() {
     renderInventoryTable();
     renderOrdersTable();
@@ -340,7 +345,6 @@ function initTheme() {
     updateThemeIcons();
 }
 
-// Complete clear operation for Recent Activity Logs
 function confirmClearActivityLog() {
     requestUserConfirmation("Clear Activity Log", "Are you sure you want to permanently clear the activity records?", "Clear", () => {
         activityLog = [];
@@ -398,54 +402,13 @@ function isWithinTimeframe(dateStr, tf) {
     const now = new Date();
     if (tf === 'today') return date.toDateString() === now.toDateString();
     if (tf === 'week') {
-        const firstDay = new Date(now.setDate(now.getDate() - now.getDate() - now.getDay()));
+        const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
         now.setHours(23,59,59,999);
         const lastDay = new Date(now.setDate(now.getDate() - now.getDay() + 6));
         return date >= firstDay && date <= lastDay;
     }
     if (tf === 'month') return date.getMonth() === new Date().getMonth() && date.getFullYear() === new Date().getFullYear();
     return true;
-}
-
-function renderSummary() {
-    let rev = 0, cost = 0, profit = 0, debt = 0;
-    orders.forEach(o => {
-        if(o.status === 'cancelled') return; 
-        const paid = o.amountPaid || 0; 
-        debt += (o.totalRevenue - paid);
-        if (isWithinTimeframe(o.date, dashboardTimeframe)) { rev += o.totalRevenue; cost += o.totalCost; profit += o.totalProfit; }
-    });
-    
-    let inventoryValue = 0;
-    let expectedSales = 0;
-    let totalRemaining = 0, lowStock = 0, outOfStock = 0;
-    
-    inventory.forEach(i => {
-        inventoryValue += (i.stockQty * (i.unitCost || 0));
-        expectedSales += (i.stockQty * (i.sellPrice || 0));
-        
-        totalRemaining += i.stockQty;
-        if(i.stockQty <= 0) outOfStock++;
-        else if(i.stockQty <= 3) lowStock++;
-    });
-
-    let expectedProfit = expectedSales - inventoryValue;
-    let moneySpent = 0;
-    stockHistory.forEach(sh => { moneySpent += sh.totalCost; });
-
-    document.getElementById('summary-revenue').innerText = rev.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('summary-profit').innerText = profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('summary-roi').innerText = `${cost > 0 ? ((profit/cost)*100).toFixed(0) : 0}% ROI`;
-    document.getElementById('stat-pending-balance').innerText = debt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    
-    document.getElementById('dash-inv-value').innerText = inventoryValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('dash-money-spent').innerText = moneySpent.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('dash-exp-sales').innerText = expectedSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('dash-exp-profit').innerText = expectedProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-    document.getElementById('dash-total-products').innerText = inventory.length;
-    document.getElementById('dash-low-stock').innerText = lowStock;
-    document.getElementById('dash-out-stock').innerText = outOfStock;
 }
 
 function openFinancialModal(type) {
@@ -647,9 +610,6 @@ function renderActivityLog() {
 }
 
 // ================= INVENTORY LOGIC =================
-const itemNameInput = document.getElementById('item-name');
-const customDropdown = document.getElementById('custom-dropdown');
-
 function showDropdown() {
     const filter = itemNameInput.value.trim().toLowerCase();
     customDropdown.innerHTML = '';
@@ -801,7 +761,6 @@ function saveStockEdit(e) {
             requiresOrderUpdate = true;
         }
 
-        // Apply Stock Adjustment Level
         if (adjQty !== 0) {
             item.stockQty += adjQty;
             logActivity('stock_adj', `Manually adjusted stock level of ${name} by ${adjQty > 0 ? '+'+adjQty : adjQty} (${adjType})`);
@@ -852,7 +811,6 @@ function renderInventoryTable() {
         if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" class="w-10 h-10 object-cover rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
         else detailBlock = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-sm flex-shrink-0 border border-indigo-100 dark:border-indigo-800/50">${item.name.substring(0,2).toUpperCase()}</div><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
 
-        // Recommended Bounds tag
         const minRec = item.recCppMin || 0;
         const maxRec = item.recCppMax || 0;
         const recommendationTag = (minRec > 0 || maxRec > 0) 
@@ -889,7 +847,6 @@ function renderInventoryTable() {
             <td class="py-3 px-4 sm:px-5 text-right action-prevent-trigger">
                 <div class="flex items-center justify-end gap-1.5 sm:gap-2">
                     <button onclick="addToCart('${item.id}'); switchTab('orders');" title="Sell" class="p-2 sm:p-2.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-xl transition-colors border border-indigo-100 dark:border-indigo-800/30 shadow-sm btn-transition min-h-[36px] min-w-[36px] flex items-center justify-center"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                    <button onclick="deleteProduct('${item.id}')" title="Delete Product" class="p-2 sm:p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors border border-transparent hover:border-rose-200 dark:hover:border-rose-600 min-h-[36px] min-w-[36px] flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </td>
         `;
@@ -1043,8 +1000,8 @@ function renderPOSCatalog() {
         const outOfStock = item.stockQty <= 0;
         grid.innerHTML += `
             <div onclick="${outOfStock ? '' : `addToCart('${item.id}')`}" class="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 rounded-2xl p-3 flex flex-col justify-between transition-all shadow-sm ${outOfStock ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md cursor-pointer group active:scale-[0.98]'}">
-                <div>${imageBlock}<h4 class="font-bold text-xs leading-tight mb-1 text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">${item.name}</h4><span class="text-[10px] font-black uppercase tracking-wider ${outOfStock ? 'text-rose-500' : 'text-slate-500'}">${item.stockQty} in stock</span></div>
-                <div class="mt-3 flex items-center justify-between"><span class="text-indigo-600 dark:text-indigo-400 font-black text-sm tracking-tight">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>${!outOfStock ? `<div class="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-700 group-hover:bg-indigo-100 dark:hover:bg-indigo-900/50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors shadow-sm"><i data-lucide="plus" class="w-4 h-4"></i></div>` : ''}</div>
+                <div>${imageBlock}<h4 class="font-bold text-xs leading-tight mb-1 text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors line-clamp-2">${item.name}</h4><span class="text-[10px] font-black uppercase tracking-wider ${outOfStock ? 'text-rose-500' : 'text-slate-500'}">${item.stockQty} in stock</span></div>
+                <div class="mt-3 flex items-center justify-between"><span class="text-indigo-600 dark:text-indigo-400 font-black text-sm tracking-tight">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>${!outOfStock ? `<div class="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-700 group-hover:bg-indigo-100 dark:hover:bg-indigo-900/50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm"><i data-lucide="plus" class="w-4 h-4"></i></div>` : ''}</div>
             </div>
         `;
     }); initIcons();
@@ -1147,7 +1104,6 @@ function togglePaidFullCheck(cb) {
 
 function clearCart() {
     if (editingOrderId) {
-        // Roll back and drop edits, restoring original database quantities perfectly
         const origOrder = orders.find(o => o.id === editingOrderId);
         if (origOrder) {
             getOrderItems(origOrder).forEach(item => {
@@ -1194,7 +1150,6 @@ function checkoutCart() {
     if(cart.length === 0) { showToast("Add items to cart first", "error"); return; }
     if(!customer) { showToast("Customer name is required", "error"); document.getElementById('pos-customer').focus(); return; }
     
-    // Check if another active transaction exists for this client (excluding current edit receipt context)
     const existingActive = orders.find(o => o.customerName.toLowerCase() === customer.toLowerCase() && !o.isPaid && o.status !== 'cancelled' && o.id !== editingOrderId);
     if (existingActive) {
         showToast(`Customer already has an active unpaid order (${existingActive.id}). Complete that transaction first.`, "error");
@@ -1224,14 +1179,12 @@ function checkoutCart() {
         };
     });
 
-    // Finalize stock volume deductions securely
     cart.forEach(cartItem => {
         const invItem = inventory.find(i => i.id === cartItem.id); 
         if(invItem) invItem.stockQty -= cartItem.qty;
     });
 
     if (editingOrderId) {
-        // Fetch and map straight into original record document seamlessly
         const targetOrder = orders.find(o => o.id === editingOrderId);
         if (targetOrder) {
             targetOrder.customerName = customer;
@@ -1248,7 +1201,6 @@ function checkoutCart() {
         }
         editingOrderId = null;
     } else {
-        // Issue completely new clean ticket reference identifier sequence
         const newReceiptNum = 'ORD-' + Date.now().toString().slice(-6) + '-' + Math.random().toString(36).substr(2,3).toUpperCase();
         orders.push({
             id: newReceiptNum,
@@ -1272,7 +1224,6 @@ function checkoutCart() {
     saveOrders();
     saveActivityLog();
     
-    // Reset inputs and basket states
     cart = [];
     document.getElementById('pos-customer').value = '';
     const pf = document.getElementById('pos-paid-full');
@@ -1285,46 +1236,116 @@ function checkoutCart() {
     switchTab('orders');
 }
 
-// ================= ORDERS HISTORY MODULE =================
+// ================= ORDERS HISTORY IMPLEMENTATIONS =================
 function setOrderTab(tab) {
     currentOrderTab = tab;
-    const btnActive = document.getElementById('tab-active-orders'), btnCancel = document.getElementById('tab-cancelled-orders'), filters = document.getElementById('active-filters');
-    if(tab === 'active') {
-        btnActive.classList.replace('text-slate-500', 'bg-white'); btnActive.classList.replace('hover:text-slate-700', 'dark:bg-slate-600'); btnActive.classList.add('shadow-sm', 'text-slate-800', 'dark:text-white');
-        btnCancel.classList.replace('bg-white', 'text-slate-500'); btnCancel.classList.replace('dark:bg-slate-600', 'hover:text-slate-700'); btnCancel.classList.remove('shadow-sm', 'text-slate-800', 'dark:text-white');
-        if(filters) filters.classList.remove('opacity-50', 'pointer-events-none');
-    } else {
-        btnCancel.classList.replace('text-slate-500', 'bg-white'); btnCancel.classList.replace('hover:text-slate-700', 'dark:bg-slate-600'); btnCancel.classList.add('shadow-sm', 'text-slate-800', 'dark:text-white');
-        btnActive.classList.replace('bg-white', 'text-slate-500'); btnActive.classList.replace('dark:bg-slate-600', 'hover:text-slate-700'); btnActive.classList.remove('shadow-sm', 'text-slate-800', 'dark:text-white');
-        if(filters) filters.classList.add('opacity-50', 'pointer-events-none');
-    } currentOrdersPage = 1; renderOrdersTable();
+    
+    const tabIds = ['all', 'active', 'completed', 'cancelled'];
+    tabIds.forEach(id => {
+        const btn = document.getElementById(`tab-${id}-orders`);
+        if(!btn) return;
+        if(id === tab) {
+            btn.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition-all duration-200 whitespace-nowrap";
+        } else {
+            btn.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-200 whitespace-nowrap";
+        }
+    });
+
+    currentOrdersPage = 1; 
+    renderOrdersTable();
 }
 
 function changeRowsPerPage() { ordersPerPage = parseInt(document.getElementById('rows-per-page-select').value); currentOrdersPage = 1; renderOrdersTable(); }
-
-function applyOrderFilter(f) { 
-    currentFilter = f; currentOrdersPage = 1;
-    document.querySelectorAll('[data-filter-btn]').forEach(btn => {
-        if(btn.dataset.filterBtn === f) { btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); btn.classList.remove('text-slate-500'); } 
-        else { btn.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); btn.classList.add('text-slate-500'); }
-    }); renderOrdersTable(); 
-}
-
-function applyOrderSorting() { currentSort = document.getElementById('order-sorter').value; currentOrdersPage = 1; renderOrdersTable(); }
 function prevOrdersPage() { if (currentOrdersPage > 1) { currentOrdersPage--; renderOrdersTable(); } }
 function nextOrdersPage() { let filtered = getFilteredOrders(); if (currentOrdersPage < Math.ceil(filtered.length / ordersPerPage)) { currentOrdersPage++; renderOrdersTable(); } }
 
+// Re-engineered Multi-Direction Click Sort Mapping Cycles
+function toggleOrderSort(column) {
+    if (orderSortColumn === column) {
+        if (orderSortDirection === 'none') orderSortDirection = 'asc';
+        else if (orderSortDirection === 'asc') orderSortDirection = 'desc';
+        else orderSortDirection = 'none';
+    } else {
+        orderSortColumn = column;
+        orderSortDirection = 'asc';
+    }
+    updateSortIndicators();
+    renderOrdersTable();
+}
+
+function updateSortIndicators() {
+    const columns = ['id', 'customer', 'date', 'total', 'payment', 'delivery'];
+    columns.forEach(col => {
+        const el = document.getElementById(`sort-icon-${col}`);
+        if (!el) return;
+        if (orderSortColumn === col && orderSortDirection !== 'none') {
+            el.innerText = orderSortDirection === 'asc' ? ' ↑' : ' ↓';
+        } else {
+            el.innerText = '';
+        }
+    });
+}
+
 function getFilteredOrders() {
     let filtered = [...orders];
-    if(currentOrderTab === 'cancelled') filtered = filtered.filter(o => o.status === 'cancelled');
-    else {
-        filtered = filtered.filter(o => o.status !== 'cancelled');
-        if(currentFilter === 'unpaid') filtered = filtered.filter(o => !o.isPaid);
-        if(currentFilter === 'pending') filtered = filtered.filter(o => !o.isReceived);
+    
+    // 1. Structural Tab Category Filter Parameters Lookup
+    if (currentOrderTab === 'cancelled') {
+        filtered = filtered.filter(o => o.status === 'cancelled');
+    } else if (currentOrderTab === 'active') {
+        filtered = filtered.filter(o => o.status !== 'cancelled' && !o.isPaid);
+    } else if (currentOrderTab === 'completed') {
+        filtered = filtered.filter(o => o.status !== 'cancelled' && o.isPaid);
+    } else {
+        // Tab key matches 'all' tracking state view parameters
+        if (currentFilter === 'unpaid') filtered = filtered.filter(o => !o.isPaid && o.status !== 'cancelled');
+        if (currentFilter === 'pending') filtered = filtered.filter(o => !o.isReceived && o.status !== 'cancelled');
     }
-    if(currentSort === 'newest') filtered.sort((a, b) => b.id.localeCompare(a.id));
-    else if(currentSort === 'oldest') filtered.sort((a, b) => a.id.localeCompare(b.id));
-    else if(currentSort === 'customer') filtered.sort((a, b) => a.customerName.localeCompare(b.customerName));
+
+    // 2. Continuous Input Query Text Filter Synchronization Lookups
+    const searchVal = (document.getElementById('history-search')?.value || '').trim().toLowerCase();
+    if (searchVal) {
+        filtered = filtered.filter(o => {
+            const itemsMatch = getOrderItems(o).some(i => i.name.toLowerCase().includes(searchVal));
+            return (o.id.toLowerCase().includes(searchVal) || 
+                    o.customerName.toLowerCase().includes(searchVal) || 
+                    itemsMatch);
+        });
+    }
+
+    // 3. Click Header Column Sort Engine Pipeline Lookups
+    if (orderSortColumn && orderSortDirection !== 'none') {
+        const dirModifier = orderSortDirection === 'asc' ? 1 : -1;
+        filtered.sort((a, b) => {
+            if (orderSortColumn === 'id') {
+                return a.id.localeCompare(b.id) * dirModifier;
+            }
+            if (orderSortColumn === 'customer') {
+                return a.customerName.localeCompare(b.customerName) * dirModifier;
+            }
+            if (orderSortColumn === 'date') {
+                return (new Date(a.date || 0) - new Date(b.date || 0)) * dirModifier;
+            }
+            if (orderSortColumn === 'total') {
+                return (a.totalRevenue - b.totalRevenue) * dirModifier;
+            }
+            if (orderSortColumn === 'payment') {
+                const aPaid = a.isPaid ? 1 : 0;
+                const bPaid = b.isPaid ? 1 : 0;
+                return (aPaid - bPaid) * dirModifier;
+            }
+            if (orderSortColumn === 'delivery') {
+                const aReceived = a.isReceived ? 1 : 0;
+                const bReceived = b.isReceived ? 1 : 0;
+                return (aReceived - bReceived) * dirModifier;
+            }
+            return 0;
+        });
+    } else {
+        // Fallback structural chronological descending pipeline order mapping
+        filtered.sort((a, b) => b.id.localeCompare(a.id));
+    }
+    
     return filtered;
 }
 
@@ -1358,7 +1379,6 @@ function editOrder(id) {
 
     if (editingOrderId) {
         if(!confirm("An editing session is already active. Discard those changes and open this ticket?")) return;
-        // Revert temporary hold state levels out cleanly
         const priorOrder = orders.find(o => o.id === editingOrderId);
         if(priorOrder) {
             getOrderItems(priorOrder).forEach(item => {
@@ -1370,13 +1390,11 @@ function editOrder(id) {
 
     editingOrderId = order.id;
 
-    // Temporarily restore item stocks into inventory pools for fluid adjustment parameters
     getOrderItems(order).forEach(item => {
         const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
         if (invItem) invItem.stockQty += item.qty;
     });
 
-    // Populate cash register cart frame mapping natively
     cart = getOrderItems(order).map(item => {
         const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
         return {
@@ -1391,7 +1409,6 @@ function editOrder(id) {
 
     document.getElementById('pos-customer').value = order.customerName;
     
-    // Toggle manual payment values frame input controls out
     const pAmtInput = document.getElementById('pos-paid-amount');
     const pFullCheck = document.getElementById('pos-paid-full');
     if (pFullCheck) pFullCheck.checked = false;
@@ -1436,45 +1453,68 @@ function renderOrdersTable() {
     document.getElementById('pagination-info-text').innerText = `Showing page ${currentOrdersPage} of ${totalPages} (${filtered.length} total)`;
     const pageSlicedOrders = filtered.slice((currentOrdersPage - 1) * ordersPerPage, ((currentOrdersPage - 1) * ordersPerPage) + ordersPerPage);
 
-    if(pageSlicedOrders.length === 0) { list.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400"><div class="flex flex-col items-center justify-center"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">No records found.</p></div></td></tr>`; initIcons(); return; }
+    if(pageSlicedOrders.length === 0) { list.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400"><div class="flex flex-col items-center justify-center"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">No records found.</p></div></td></tr>`; initIcons(); return; }
     
     pageSlicedOrders.forEach(order => {
         const due = order.totalRevenue - (order.amountPaid || 0); const isCancelled = order.status === 'cancelled';
         
         let pBadge = isCancelled ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg uppercase tracking-wider"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Void</span>`
-            : (order.isPaid ? `<button onclick="toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800/30 uppercase tracking-wider hover:bg-emerald-100"><i data-lucide="check" class="w-3 h-3"></i> Paid</button>`
-                : ((order.amountPaid || 0) > 0 ? `<button onclick="toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-800/30 uppercase tracking-wider hover:bg-amber-100"><i data-lucide="clock" class="w-3 h-3"></i> Bal: ₱ ${due.toFixed(2)}</button>`
-                    : `<button onclick="toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-800/30 uppercase tracking-wider hover:bg-rose-100"><i data-lucide="alert-circle" class="w-3 h-3"></i> Unpaid</button>`));
+            : (order.isPaid ? `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800/30 uppercase tracking-wider hover:bg-emerald-100"><i data-lucide="check" class="w-3 h-3"></i> Paid</button>`
+                : ((order.amountPaid || 0) > 0 ? `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-800/30 uppercase tracking-wider hover:bg-emerald-100"><i data-lucide="clock" class="w-3 h-3"></i> Bal: ₱ ${due.toFixed(2)}</button>`
+                    : `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-800/30 uppercase tracking-wider hover:bg-rose-100"><i data-lucide="alert-circle" class="w-3 h-3"></i> Unpaid</button>`));
         
         const delBtn = isCancelled ? `<span class="text-slate-400 font-bold text-xl">-</span>` 
-            : (order.isReceived ? `<button onclick="toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 uppercase tracking-wider"><i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-500"></i> Delivered</button>`
-                : `<button onclick="toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-white dark:bg-slate-900 text-slate-500 rounded-lg border border-slate-200/70 shadow-sm hover:bg-slate-50 uppercase tracking-wider"><i data-lucide="truck" class="w-3.5 h-3.5 text-amber-500"></i> Pending</button>`);
+            : (order.isReceived ? `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 uppercase tracking-wider"><i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-500"></i> Delivered</button>`
+                : `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-white dark:bg-slate-900 text-slate-500 rounded-lg border border-slate-200/70 shadow-sm hover:bg-slate-50 uppercase tracking-wider"><i data-lucide="truck" class="w-3.5 h-3.5 text-amber-500"></i> Pending</button>`);
 
         const editBadge = order.isEdited && !isCancelled ? `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 align-middle">Edited</span>` : '';
         const itemsListStr = getOrderItems(order).map(i => `${i.qty}x ${i.name}`).join(', ');
 
-        let actionHtml = `<button onclick="generateReceipt('${order.id}')" title="Receipt" class="p-2 sm:p-2.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
+        let actionHtml = `<button onclick="event.stopPropagation(); generateReceipt('${order.id}')" title="Receipt" class="p-2 sm:p-2.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
         
         if(!isCancelled && !order.isPaid) {
-            actionHtml += `<button onclick="editOrder('${order.id}')" title="Edit Basket Contents" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button><button onclick="cancelOrder('${order.id}')" title="Cancel Order" class="p-2 sm:p-2.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
+            actionHtml += `<button onclick="event.stopPropagation(); editOrder('${order.id}')" title="Edit Basket Contents" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); cancelOrder('${order.id}')" title="Cancel Order" class="p-2 sm:p-2.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
         } else if (order.isPaid && !isCancelled) {
             actionHtml += `<span title="Locked Receipt (Paid)" class="p-2 sm:p-2.5 text-slate-300 dark:text-slate-600 cursor-not-allowed"><i data-lucide="lock" class="w-4 h-4"></i></span>`;
         }
 
         if (isCancelled) {
-            actionHtml += `<button onclick="deleteOrderPermanently('${order.id}')" title="Delete Permanently" class="p-2 sm:p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            actionHtml += `<button onclick="event.stopPropagation(); deleteOrderPermanently('${order.id}')" title="Delete Permanently" class="p-2 sm:p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
         }
 
-        list.innerHTML += `
-            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${isCancelled ? 'opacity-50 grayscale bg-slate-50/30 dark:bg-slate-900/20' : ''}">
-                <td class="py-3 px-4 sm:px-5"><div class="flex flex-col"><div class="font-black text-sm text-slate-900 dark:text-white">${order.customerName}${editBadge}</div><span class="text-[9px] text-slate-400 mt-1 font-semibold tracking-wide uppercase">${order.id} • ${order.date || "N/A"}</span></div></td>
-                <td class="py-3 px-3 sm:px-4 text-xs font-medium text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title="${itemsListStr}">${itemsListStr}</td>
-                <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400 tracking-tight ${isCancelled?'line-through':''}">₱ ${order.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td class="py-3 px-3 sm:px-4 text-center">${pBadge}</td>
-                <td class="py-3 px-3 sm:px-4 text-center">${delBtn}</td>
-                <td class="py-3 px-4 sm:px-5 text-right"><div class="flex items-center justify-end gap-1 sm:gap-1.5">${actionHtml}</div></td>
-            </tr>
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer " + (isCancelled ? 'opacity-50 grayscale bg-slate-50/30 dark:bg-slate-900/20' : '');
+        
+        // Entire row click opens Order DetailsPopup context cleanly
+        row.onclick = () => { generateReceipt(order.id); };
+
+        // Realigned columns - perfectly lining up with header classes
+        row.innerHTML = `
+            <td class="w-[20%] py-3 px-4 sm:px-5 truncate-cell">
+                <div class="font-bold text-sm text-slate-900 dark:text-white truncate" title="${order.customerName}">${order.customerName}${editBadge}</div>
+            </td>
+            <td class="w-[15%] py-3 px-3 sm:px-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                ${order.date || "N/A"}
+            </td>
+            <td class="w-[25%] py-3 px-3 sm:px-4 text-xs font-medium text-slate-600 dark:text-slate-300 truncate-cell" title="${itemsListStr}">
+                ${itemsListStr}
+            </td>
+            <td class="w-[13%] py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400 tracking-tight ${isCancelled?'line-through':''}">
+                ₱ ${order.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2})}
+            </td>
+            <td class="w-[12%] py-3 px-3 sm:px-4 text-center action-prevent-trigger">
+                ${pBadge}
+            </td>
+            <td class="w-[12%] py-3 px-3 sm:px-4 text-center action-prevent-trigger">
+                ${delBtn}
+            </td>
+            <td class="w-[8%] py-3 px-4 sm:px-5 text-right action-prevent-trigger">
+                <div class="flex items-center justify-end gap-1 sm:gap-1.5">
+                    ${actionHtml}
+                </div>
+            </td>
         `;
+        list.appendChild(row);
     }); initIcons();
 }
 
@@ -1931,6 +1971,34 @@ function renderBnplTable() {
     }); initIcons();
 }
 
+function renderBnplUI() {
+    renderBnplTable();
+    renderBatchMatrixTable();
+
+    let pool = 0;
+    orders.forEach(o => {
+        if(o.status !== 'cancelled') pool += (o.amountPaid || 0);
+    });
+
+    let totalApPaid = 0;
+    let totalApUnpaid = 0;
+
+    bnplRecords.forEach(b => {
+        totalApPaid += (b.amountPaid || 0);
+        totalApUnpaid += (b.totalAmount - (b.amountPaid || 0));
+    });
+
+    const liquidSafe = pool - totalApPaid;
+    
+    const poolEl = document.getElementById('cashflow-liquid-pool');
+    const unpaidEl = document.getElementById('cashflow-unpaid-bnpl');
+    const paidEl = document.getElementById('cashflow-paid-bnpl');
+
+    if(poolEl) poolEl.innerText = liquidSafe.toLocaleString(undefined, {minimumFractionDigits: 2});
+    if(unpaidEl) unpaidEl.innerText = totalApUnpaid.toLocaleString(undefined, {minimumFractionDigits: 2});
+    if(paidEl) paidEl.innerText = totalApPaid.toLocaleString(undefined, {minimumFractionDigits: 2});
+}
+
 function renderBatchMatrixTable() {
     const list = document.getElementById('batch-matrix-list');
     if(!list) return; list.innerHTML = '';
@@ -1967,7 +2035,7 @@ function renderBatchMatrixTable() {
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                 <td class="py-3 px-5 font-bold text-slate-900 dark:text-white">${name}</td>
                 <td class="py-3 px-4 text-right font-semibold text-amber-600 dark:text-amber-400">₱ ${spent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="py-3 px-4 text-right font-semibold text-indigo-600 dark:text-indigo-400">₱ ${spent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="py-3 px-4 text-right font-semibold text-indigo-600 dark:text-indigo-400">₱ ${sold.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 <td class="py-3 px-5 text-right font-black ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">₱ ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
             </tr>
         `;
@@ -2024,4 +2092,71 @@ function importData(event) {
             showToast("System restored", "success"); document.getElementById('import-file').value = '';
         } catch(err) { showToast("Invalid backup file format", "error"); }
     }; reader.readAsText(file);
+}
+
+// ================= SUMMARY / STATS KPI LOGIC =================
+function renderSummary() {
+    let revenue = 0; let profit = 0; let totalSpent = 0;
+
+    let validOrders = orders.filter(o => o.status !== 'cancelled' && isWithinTimeframe(o.date, dashboardTimeframe));
+    validOrders.forEach(o => { revenue += o.totalRevenue; profit += o.totalProfit; });
+
+    let pendingBalance = 0;
+    orders.forEach(o => { if(o.status !== 'cancelled') pendingBalance += (o.totalRevenue - (o.amountPaid || 0)); });
+
+    let activeStockHistory = stockHistory.filter(sh => isWithinTimeframe(sh.date, dashboardTimeframe));
+    activeStockHistory.forEach(sh => totalSpent += (sh.totalCost || 0));
+
+    let inventoryVal = 0;
+    let expectedSalesVal = 0;
+    let expectedProfitVal = 0;
+    let totalProductsCount = inventory.length;
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+
+    inventory.forEach(i => {
+        const currentStock = i.stockQty || 0;
+        const avgCPP = i.unitCost || 0;
+        const price = i.sellPrice || 0;
+
+        inventoryVal += currentStock * avgCPP;
+        expectedSalesVal += currentStock * price;
+        expectedProfitVal += currentStock * (price - avgCPP);
+
+        if(currentStock <= 0) outOfStockCount++;
+        else if(currentStock <= 3) lowStockCount++;
+    });
+
+    const revEl = document.getElementById('summary-revenue');
+    const profEl = document.getElementById('summary-profit');
+    const roiEl = document.getElementById('summary-roi');
+    const apBalEl = document.getElementById('stat-pending-balance');
+
+    const dValueEl = document.getElementById('dash-inv-value');
+    const dSpentEl = document.getElementById('dash-money-spent');
+    const dExpectedSalesEl = document.getElementById('dash-exp-sales');
+    const dExpectedProfitEl = document.getElementById('dash-exp-profit');
+
+    const totalProdEl = document.getElementById('dash-total-products');
+    const lowStockEl = document.getElementById('dash-low-stock');
+    const outStockEl = document.getElementById('dash-out-stock');
+
+    if(revEl) revEl.innerText = revenue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    if(profEl) profEl.innerText = profit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    if(apBalEl) apBalEl.innerText = pendingBalance.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+
+    if (roiEl) {
+        const spentDivisor = totalSpent || inventoryVal;
+        const roi = spentDivisor > 0 ? (profit / spentDivisor) * 100 : 0;
+        roiEl.innerText = `${roi.toFixed(1)}% ROI`;
+    }
+
+    if(dValueEl) dValueEl.innerText = inventoryVal.toLocaleString(undefined, {minimumFractionDigits: 2});
+    if(dSpentEl) dSpentEl.innerText = totalSpent.toLocaleString(undefined, {minimumFractionDigits: 2});
+    if(dExpectedSalesEl) dExpectedSalesEl.innerText = expectedSalesVal.toLocaleString(undefined, {minimumFractionDigits: 2});
+    if(dExpectedProfitEl) dExpectedProfitEl.innerText = expectedProfitVal.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+    if(totalProdEl) totalProdEl.innerText = totalProductsCount;
+    if(lowStockEl) lowStockEl.innerText = lowStockCount;
+    if(outStockEl) outStockEl.innerText = outOfStockCount;
 }
