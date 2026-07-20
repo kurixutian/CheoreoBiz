@@ -16,20 +16,19 @@ const auth = firebase.auth();
 let inventory = [];
 let orders = [];
 let bundles = [];
-let cart = []; 
+let cart = [];
 let activityLog = [];
 let stockHistory = [];
-let bnplRecords = []; 
+let bnplRecords = [];
 
-let currentFilter = 'all'; 
-let currentOrderTab = 'all'; // Changed default tab target state to support unified lifecycle hook filters
+let currentFilter = 'all';
+let currentOrderTab = 'all';
 let dashboardTimeframe = 'all';
 let ordersPerPage = 10;
 let currentOrdersPage = 1;
 
 let draftBundleItems = [];
 let editingBundleId = null;
-let isMobileCartExpanded = false; 
 
 // Internal Supplier Batch State
 let currentBatchItems = [];
@@ -40,8 +39,8 @@ let confirmProceedCallback = null;
 let editingOrderId = null;
 
 // POS Table Header Click Sorting Session Coordinates
-let orderSortColumn = null;    // Tracks column keys: 'id', 'customer', 'date', 'total', 'payment', 'delivery'
-let orderSortDirection = 'none'; // Alternates through: 'none', 'asc', 'desc'
+let orderSortColumn = null;
+let orderSortDirection = 'none';
 
 const itemNameInput = document.getElementById('item-name');
 const customDropdown = document.getElementById('custom-dropdown');
@@ -60,24 +59,30 @@ document.addEventListener('click', (e) => {
         custDropdown.classList.add('hidden');
     }
 
-    // Click outside bindings for Batch entry
     const bItemInput = document.getElementById('batch-item-search');
     const bItemDropdown = document.getElementById('batch-item-dropdown');
-    if(bItemInput && bItemDropdown && !bItemInput.contains(e.target) && !bItemDropdown.contains(e.target)) {
+    if (bItemInput && bItemDropdown && !bItemInput.contains(e.target) && !bItemDropdown.contains(e.target)) {
         bItemDropdown.classList.add('hidden');
     }
 
-    // Click outside bindings for Supplier entry dropdown
     const sInput = document.getElementById('bnpl-supplier');
     const sDropdown = document.getElementById('supplier-dropdown');
-    if(sInput && sDropdown && !sInput.contains(e.target) && !sDropdown.contains(e.target)) {
+    if (sInput && sDropdown && !sInput.contains(e.target) && !sDropdown.contains(e.target)) {
         sDropdown.classList.add('hidden');
     }
 
-    // Click outside bindings for calculator wrapper
+    // Modal Click-outside Close Logic for Calculator
     const calcPopup = document.getElementById('calculator-popup');
     const calcWrapper = document.getElementById('calculator-wrapper');
-    if(calcPopup && !calcPopup.classList.contains('hidden') && calcWrapper && !calcWrapper.contains(e.target) && !e.target.closest('button[title="Quick Calculator"]') && !e.target.closest('button[title="Quick Calc"]')) {
+    if (calcPopup && !calcPopup.classList.contains('hidden') && calcWrapper && !calcWrapper.contains(e.target) && !e.target.closest('button[title="Quick Calculator"]')) {
+        toggleCalculator(false);
+    }
+});
+
+// ESC Key listener to close active popups
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeCartModal();
         toggleCalculator(false);
     }
 });
@@ -102,14 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Universal Backdrop Close Utility
+// Universal Backdrop Close Utility for Standard Modals
 function closeModalOnBackdrop(e, modalId) {
     if (e.target === e.currentTarget) {
         closeModal(modalId);
     }
 }
 
-// Show Custom Confirmation popup UI instead of generic system triggers
+// Show Custom Confirmation popup UI
 function requestUserConfirmation(title, message, proceedText, callback) {
     document.getElementById('confirm-modal-title').innerText = title;
     document.getElementById('confirm-modal-message').innerText = message;
@@ -161,20 +166,21 @@ function showToast(message, type = 'success') {
 // Global modal animation handler methods
 function openModal(id) {
     const modal = document.getElementById(id);
+    if (!modal) return;
     modal.classList.remove('hidden');
     setTimeout(() => {
         modal.classList.remove('opacity-0');
-        modal.querySelector('div').classList.remove('scale-95');
+        const inner = modal.querySelector('div');
+        if (inner) inner.classList.remove('scale-95');
     }, 10);
 }
 
-// Fixed popup dismiss settings to reset structural layout visibility properties
 function closeModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
     modal.classList.add('opacity-0');
-    const innerDiv = modal.querySelector('div');
-    if (innerDiv) innerDiv.classList.add('scale-95');
+    const inner = modal.querySelector('div');
+    if (inner) inner.classList.add('scale-95');
     setTimeout(() => modal.classList.add('hidden'), 200);
 }
 
@@ -182,17 +188,14 @@ function logActivity(type, message) {
     const timestamp = Date.now();
     activityLog.unshift({
         id: 'act-' + timestamp,
-        date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         type, message, timestamp
     });
     if (activityLog.length > 50) activityLog.pop();
 }
 
-// Backward Compatibility Data Mapper for Single-Item Legacy Records vs Multi-Item Receipt Baskets
 function getOrderItems(order) {
-    if (order.items && Array.isArray(order.items)) {
-        return order.items;
-    }
+    if (order.items && Array.isArray(order.items)) return order.items;
     return [{
         id: order.itemId || "legacy-id",
         name: order.itemName || "Unknown Product",
@@ -208,53 +211,69 @@ function getOrderItems(order) {
 // ================= FLOATING HEADER CALCULATOR ENGINE =================
 function toggleCalculator(show) {
     const popup = document.getElementById('calculator-popup');
-    if(!popup) return;
-    if(show) {
+    const wrapper = document.getElementById('calculator-wrapper');
+    if (!popup || !wrapper) return;
+    if (show) {
         popup.classList.remove('hidden');
-        setTimeout(() => { popup.classList.remove('opacity-0'); document.getElementById('calculator-wrapper').classList.remove('scale-95'); }, 10);
+        setTimeout(() => {
+            popup.classList.remove('opacity-0');
+            wrapper.classList.remove('scale-95');
+        }, 10);
     } else {
         popup.classList.add('opacity-0');
-        document.getElementById('calculator-wrapper').classList.add('scale-95');
+        wrapper.classList.add('scale-95');
         setTimeout(() => popup.classList.add('hidden'), 200);
     }
 }
 
 function pressCalc(val) {
     const screen = document.getElementById('calc-screen');
-    if(!screen) return;
-    if(val === 'C') { screen.value = '0'; }
-    else if(val === '=') {
+    if (!screen) return;
+    if (val === 'C') { screen.value = '0'; }
+    else if (val === '=') {
         try {
             let expr = screen.value.replace(/[^0-9\+\-\*\.\/]/g, '');
-            if(!expr) return;
+            if (!expr) return;
             let result = new Function(`return (${expr})`)();
             screen.value = Number(result).toString();
-        } catch(e) { screen.value = 'Error'; }
+        } catch (e) { screen.value = 'Error'; }
     } else {
-        if(screen.value === '0' || screen.value === 'Error') screen.value = val;
+        if (screen.value === '0' || screen.value === 'Error') screen.value = val;
         else screen.value += val;
     }
 }
 
-function toggleMobileCart(forceExpand = null) {
-    if (window.innerWidth >= 1280) return; 
-    const panel = document.getElementById('current-cart-panel');
-    const chevron = document.getElementById('mobile-cart-chevron');
-    const backdrop = document.getElementById('cart-backdrop');
+// ================= CART MODAL ENGINE (POPUP PARITY WITH CALCULATOR) =================
+function openCartModal() {
+    if (window.innerWidth >= 1280) return; // Desktop uses static column
+    const modal = document.getElementById('cartModal');
+    const wrapper = document.getElementById('cart-wrapper');
+    if (!modal || !wrapper) return;
     
-    if (forceExpand !== null) isMobileCartExpanded = forceExpand;
-    else isMobileCartExpanded = !isMobileCartExpanded;
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        wrapper.classList.remove('scale-95');
+    }, 10);
+}
+
+function closeCartModal() {
+    if (window.innerWidth >= 1280) return;
+    const modal = document.getElementById('cartModal');
+    const wrapper = document.getElementById('cart-wrapper');
+    if (!modal || !wrapper) return;
     
-    if (isMobileCartExpanded) {
-        panel.classList.remove('translate-y-[calc(100%-56px)]');
-        panel.classList.add('translate-y-0');
-        if (chevron) chevron.classList.add('rotate-180');
-        if (backdrop) { backdrop.classList.remove('hidden'); setTimeout(() => backdrop.classList.add('opacity-100'), 10); }
-    } else {
-        panel.classList.remove('translate-y-0');
-        panel.classList.add('translate-y-[calc(100%-56px)]');
-        if (chevron) chevron.classList.remove('rotate-180');
-        if (backdrop) { backdrop.classList.remove('opacity-100'); setTimeout(() => backdrop.classList.add('hidden'), 300); }
+    modal.classList.add('opacity-0');
+    wrapper.classList.add('scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 200);
+}
+
+function closeCartOnBackdrop(e) {
+    if (window.innerWidth >= 1280) return;
+    if (e.target === e.currentTarget) {
+        closeCartModal();
     }
 }
 
@@ -283,6 +302,10 @@ function handleLogin(e) {
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
     auth.signInWithEmailAndPassword(email, password).then(() => showToast('Signed in successfully', 'success')).catch(() => document.getElementById('auth-error').classList.remove('hidden'));
+}
+
+function handleLogout() {
+    auth.signOut();
 }
 
 // ================= DATABASE WRAPPERS =================
@@ -321,12 +344,7 @@ function startRealtimeSync() {
     });
 }
 
-function handleLogout() {
-    requestUserConfirmation("Sign Out", "Are you sure you want to log out of your session?", "Sign Out", () => {
-        auth.signOut().then(() => window.location.reload());
-    });
-}
-
+// ================= RENDER INTERACTION PIPELINES =================
 function renderUI() {
     renderInventoryTable();
     renderOrdersTable();
@@ -365,9 +383,7 @@ function updateThemeIcons() {
     const isDark = document.documentElement.classList.contains('dark');
     const iconName = isDark ? 'sun' : 'moon';
     const deskIcon = document.getElementById('theme-icon');
-    const mobIcon = document.querySelector('.theme-icon-mobile');
     if (deskIcon) { deskIcon.setAttribute('data-lucide', iconName); lucide.createIcons({attrs:{class:['w-4','h-4']}}); }
-    if (mobIcon) { mobIcon.setAttribute('data-lucide', iconName); lucide.createIcons(); }
 }
 
 function switchTab(tabId) {
@@ -379,7 +395,7 @@ function switchTab(tabId) {
         if (btn.dataset.tabBtn === tabId) { btn.classList.add('tab-active'); btn.classList.remove('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); } 
         else { btn.classList.remove('tab-active'); btn.classList.add('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); }
     });
-    if (tabId === 'orders') { renderPOSCatalog(); toggleMobileCart(false); }
+    if (tabId === 'orders') { renderPOSCatalog(); }
     if (tabId === 'bundles') renderBundlesTable(); 
     if (tabId === 'bnpl') renderBnplUI();
 }
@@ -402,7 +418,7 @@ function isWithinTimeframe(dateStr, tf) {
     const now = new Date();
     if (tf === 'today') return date.toDateString() === now.toDateString();
     if (tf === 'week') {
-        const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
+        const firstDay = new Date(now.setDate(now.getDate() - now.getDate() + now.getDay()));
         now.setHours(23,59,59,999);
         const lastDay = new Date(now.setDate(now.getDate() - now.getDay() + 6));
         return date >= firstDay && date <= lastDay;
@@ -419,6 +435,11 @@ function openFinancialModal(type) {
 
     if(type === 'revenue' || type === 'profit') {
         let timeFilteredOrders = orders.filter(o => o.status !== 'cancelled' && isWithinTimeframe(o.date, dashboardTimeframe));
+        
+        if (type === 'profit') {
+            timeFilteredOrders = timeFilteredOrders.filter(o => o.isPaid === true && o.isReceived === true);
+        }
+
         title = type === 'revenue' ? `Gross Sales Details (${dashboardTimeframe})` : `Net Profit Details (${dashboardTimeframe})`;
         icon = type === 'revenue' ? 'trending-up' : 'piggy-bank';
         
@@ -431,7 +452,7 @@ function openFinancialModal(type) {
             </tr>
         `;
 
-        if(timeFilteredOrders.length === 0) list.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold">No sales data for this timeframe.</td></tr>`;
+        if(timeFilteredOrders.length === 0) list.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold">No data matching filters for this timeframe.</td></tr>`;
         timeFilteredOrders.forEach(o => {
             const lines = getOrderItems(o).map(i => `${i.qty}x ${i.name}`).join('<br>');
             list.innerHTML += `
@@ -561,7 +582,7 @@ function openDashboardModal(filterType) {
     
     const list = document.getElementById('dash-modal-list'); list.innerHTML = '';
     if (filtered.length === 0) {
-        list.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No products to show.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No products to show.</td></tr>`;
     } else {
         filtered.forEach(item => {
             let badge = item.stockQty <= 0 ? `<span class="inline-block bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Out of Stock</span>`
@@ -643,8 +664,8 @@ function handleStockSubmit(e) {
     const sellPrice = parseFloat(document.getElementById('sell-price').value);
     const fileInput = document.getElementById('item-image-file');
 
-    const recMin = parseFloat(document.getElementById('stock-rec-cpp-min').value) || 0;
-    const recMax = parseFloat(document.getElementById('stock-rec-cpp-max').value) || 0;
+    const recMin = parseFloat(document.getElementById('stock-rec-cpp-min')?.value) || 0;
+    const recMax = parseFloat(document.getElementById('stock-rec-cpp-max')?.value) || 0;
 
     if (fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
@@ -731,9 +752,9 @@ function editStock(id) {
     
     const minVal = item.recCppMin || 0;
     const maxVal = item.recCppMax || 0;
-    document.getElementById('edit-stock-rec-min').value = minVal || '';
-    document.getElementById('edit-stock-rec-max').value = maxVal || '';
-    document.getElementById('edit-rec-cpp-display').innerText = `₱${minVal.toFixed(2)} - ₱${maxVal.toFixed(2)}`;
+    if(document.getElementById('edit-stock-rec-min')) document.getElementById('edit-stock-rec-min').value = minVal || '';
+    if(document.getElementById('edit-stock-rec-max')) document.getElementById('edit-stock-rec-max').value = maxVal || '';
+    if(document.getElementById('edit-rec-cpp-display')) document.getElementById('edit-rec-cpp-display').innerText = `₱${minVal.toFixed(2)} - ₱${maxVal.toFixed(2)}`;
     
     document.getElementById('edit-stock-image-file').value = ''; 
     document.getElementById('edit-stock-adj-qty').value = ''; 
@@ -750,9 +771,6 @@ function saveStockEdit(e) {
     const adjType = document.getElementById('edit-stock-adj-type').value;
     const adjQty = parseInt(document.getElementById('edit-stock-adj-qty').value) || 0;
 
-    const recMin = parseFloat(document.getElementById('edit-stock-rec-min').value) || 0;
-    const recMax = parseFloat(document.getElementById('edit-stock-rec-max').value) || 0;
-
     const item = inventory.find(i => i.id === id);
     if (item) {
         let requiresOrderUpdate = false;
@@ -768,8 +786,6 @@ function saveStockEdit(e) {
 
         item.name = name; 
         item.sellPrice = price;
-        item.recCppMin = recMin;
-        item.recCppMax = recMax;
         
         const completeSave = () => {
             saveInventory();
@@ -811,12 +827,6 @@ function renderInventoryTable() {
         if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" class="w-10 h-10 object-cover rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
         else detailBlock = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-sm flex-shrink-0 border border-indigo-100 dark:border-indigo-800/50">${item.name.substring(0,2).toUpperCase()}</div><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
 
-        const minRec = item.recCppMin || 0;
-        const maxRec = item.recCppMax || 0;
-        const recommendationTag = (minRec > 0 || maxRec > 0) 
-            ? `<div class="text-[9px] font-black text-indigo-500/80 uppercase mt-0.5 tracking-wide">Rec: ₱${minRec.toFixed(0)}-₱${maxRec.toFixed(0)}</div>` 
-            : '';
-
         const averageCPP = item.unitCost || 0;
         const sellingPrice = item.sellPrice || 0;
         const profitPerPiece = sellingPrice - averageCPP;
@@ -834,7 +844,6 @@ function renderInventoryTable() {
         row.innerHTML = `
             <td class="py-3 px-4 sm:px-5 whitespace-nowrap">
                 ${detailBlock}
-                ${recommendationTag}
             </td>
             <td class="py-3 px-3 sm:px-4 text-center">
                 <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-black tracking-wide ${item.stockQty <= 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : (item.stockQty <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300')} border ${item.stockQty <= 0 ? 'border-rose-200 dark:border-rose-800/30' : (item.stockQty <= 3 ? 'border-amber-200 dark:border-amber-800/30' : 'border-slate-200 dark:border-slate-700/50')}">${item.stockQty} pcs</span>
@@ -931,7 +940,7 @@ function deleteBundle(id) { if(confirm("Permanently delete this promo bundle?"))
 
 function renderBundlesTable() {
     const list = document.getElementById('bundles-list'); if(!list) return; list.innerHTML = '';
-    if(bundles.length === 0) { list.innerHTML = `<tr><td colspan="5" class="py-12 text-center"><div class="flex flex-col items-center justify-center text-slate-400"><i data-lucide="tags" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">No promos active.</p></div></td></tr>`; initIcons(); return; }
+    if(bundles.length === 0) { list.innerHTML = `<tr><td colspan="5" class="py-12 text-center"><div class="flex flex-col items-center justify-center text-slate-400"><i data-lucide="tags" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="sm:text-sm text-xs font-bold">No promos active.</p></div></td></tr>`; initIcons(); return; }
 
     bundles.forEach(bundle => {
         const itemsStr = bundle.items.map(i => `<span class="inline-block bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-md font-bold text-[10px] mr-1.5 mb-1.5 shadow-sm border border-slate-200 dark:border-slate-600">${i.qty}x ${i.name}</span>`).join('');
@@ -1014,23 +1023,82 @@ function addToCart(itemId) {
     else cart.push({ id: item.id, name: item.name, sellPrice: item.sellPrice || 0, unitCost: item.unitCost || 0, maxStock: item.stockQty, qty: 1 }); 
     
     renderCart();
-    toggleMobileCart(true); 
 }
 
 function updateCartQty(id, change) {
     const match = cart.find(c => c.id === id); if(!match) return; match.qty += change;
     if(match.qty <= 0) {
         cart = cart.filter(c => c.id !== id);
-        if (cart.length === 0 && !editingOrderId) toggleMobileCart(false); 
     }
-    else if(match.qty > match.maxStock) { match.qty = match.maxStock; showToast("Max stock limit reached", "info"); } renderCart();
+    else if(match.qty > match.maxStock) { match.qty = match.maxStock; showToast("Max stock limit reached", "info"); } 
+    renderCart();
+}
+
+function updateCartBadge() {
+    const totalQty = cart.reduce((accum, item) => accum + item.qty, 0);
+    const badgeCountEl = document.getElementById('cart-badge-count');
+    const fabBadgeCountEl = document.getElementById('mobile-fab-badge-count');
+
+    let badgeText = '';
+    if (totalQty > 99) {
+        badgeText = '99+';
+    } else if (totalQty > 0) {
+        badgeText = totalQty.toString();
+    }
+
+    [badgeCountEl, fabBadgeCountEl].forEach(el => {
+        if (!el) return;
+        if (totalQty === 0) {
+            el.innerText = '0';
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        } else {
+            el.innerText = badgeText;
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+    });
+}
+
+function renderSmartSuggestions() {
+    const container = document.getElementById('smart-suggestions-list');
+    if (!container) return;
+
+    const cartIds = cart.map(c => c.id);
+    const candidates = inventory.filter(i => !cartIds.includes(i.id) && i.stockQty > 0);
+    
+    if (cart.length === 0 || candidates.length === 0) {
+        container.innerHTML = `
+            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500 text-[11px] font-medium flex items-center gap-2">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+                Add catalog products to populate dynamic complementary recommendations.
+            </div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    const topPicks = candidates.slice(0, 2);
+    container.innerHTML = '';
+    
+    topPicks.forEach(item => {
+        container.innerHTML += `
+            <div class="suggestion-item-card flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/40 text-xs font-semibold animate-scale-in">
+                <div class="min-w-0 flex-1 pr-2">
+                    <p class="text-slate-900 dark:text-slate-200 font-bold truncate">${item.name}</p>
+                    <p class="text-[10px] text-slate-400 font-medium">Available: ${item.stockQty} left • ₱ ${item.sellPrice.toFixed(2)}</p>
+                </div>
+                <button type="button" onclick="addToCart('${item.id}')" class="px-2.5 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold rounded-lg btn-transition flex items-center gap-1 shadow-xs flex-shrink-0">
+                    <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> Add
+                </button>
+            </div>
+        `;
+    });
+    if (window.lucide) lucide.createIcons();
 }
 
 function renderCart() {
     const container = document.getElementById('cart-items-container'); if(!container) return; container.innerHTML = '';
     
-    const badgeCountEl = document.getElementById('cart-badge-count');
-    const headerTotalEl = document.getElementById('mobile-cart-total-header');
     const modeBadge = document.getElementById('cart-mode-badge');
     const actionBtn = document.getElementById('cart-action-btn');
     const cartTitle = document.getElementById('cart-title');
@@ -1045,23 +1113,21 @@ function renderCart() {
         if(cartTitle) cartTitle.innerText = "Current Cart";
     }
 
-    if(cart.length === 0) {
-        container.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 pointer-events-none"><i data-lucide="shopping-bag" class="w-12 h-12 mb-3 opacity-30"></i><p class="text-[11px] font-black uppercase tracking-wider">Cart is empty</p></div>`;
+    // Refresh dynamic Floating Notification Badge
+    updateCartBadge();
+
+    if (cart.length === 0) {
+        container.innerHTML = `<div class="py-12 flex flex-col items-center justify-center text-slate-400 pointer-events-none"><i data-lucide="shopping-bag" class="w-12 h-12 mb-3 opacity-30"></i><p class="text-[11px] font-black uppercase tracking-wider">Cart is empty</p></div>`;
         document.getElementById('cart-total-display').innerText = '0.00'; 
         document.getElementById('cart-subtotal-display').innerText = '0.00';
         document.getElementById('cart-discount-display').innerText = '0.00';
         document.getElementById('cart-tax-display').innerText = '0.00';
-        if(badgeCountEl) badgeCountEl.classList.add('hidden');
-        if(headerTotalEl) headerTotalEl.innerText = '₱ 0.00';
-        initIcons(); return;
+        renderSmartSuggestions();
+        initIcons();
+        return;
     }
 
     const cartCalc = calculateCart();
-    let totalItemQuantity = cart.reduce((accum, item) => accum + item.qty, 0);
-    if (badgeCountEl) {
-        badgeCountEl.innerText = totalItemQuantity;
-        badgeCountEl.classList.remove('hidden');
-    }
 
     cart.forEach(item => {
         const calcItem = cartCalc.items.find(c => c.id === item.id);
@@ -1091,167 +1157,23 @@ function renderCart() {
     document.getElementById('cart-discount-display').innerText = cartCalc.savings.toLocaleString(undefined, {minimumFractionDigits:2});
     document.getElementById('cart-tax-display').innerText = (cartCalc.total * 0.12).toLocaleString(undefined, {minimumFractionDigits:2});
     
-    if(headerTotalEl) headerTotalEl.innerText = `₱ ${formattedTotalStr} (${totalItemQuantity} items)`;
     if(document.getElementById('pos-paid-full').checked) document.getElementById('pos-paid-amount').value = cartCalc.total.toFixed(2);
+    
+    renderSmartSuggestions();
     initIcons();
 }
 
-function togglePaidFullCheck(cb) {
-    const input = document.getElementById('pos-paid-amount');
-    if(cb.checked) { input.value = calculateCart().total.toFixed(2); input.disabled = true; input.classList.add('opacity-50', 'bg-slate-100', 'dark:bg-slate-700'); } 
-    else { input.value = ''; input.disabled = false; input.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700'); }
-}
-
-function clearCart() {
-    if (editingOrderId) {
-        const origOrder = orders.find(o => o.id === editingOrderId);
-        if (origOrder) {
-            getOrderItems(origOrder).forEach(item => {
-                const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
-                if(invItem) invItem.stockQty -= item.qty;
-            });
-        }
-        editingOrderId = null;
-        showToast("Order modification discarded", "info");
-    }
-    cart = []; 
-    const pf = document.getElementById('pos-paid-full'); 
-    const pamt = document.getElementById('pos-paid-amount');
-    if(pf) pf.checked = false;
-    if(pamt) { pamt.disabled = false; pamt.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700'); pamt.value = ''; }
-    document.getElementById('pos-customer').value = '';
-    renderCart(); 
-    toggleMobileCart(false);
-}
-
-function filterCustomers() {
-    const input = document.getElementById('pos-customer'); const dropdown = document.getElementById('customer-dropdown');
-    if(!input || !dropdown) return;
-    
-    const filter = input.value.trim().toLowerCase();
-    const uniqueCustomers = [...new Set(orders.map(o => o.customerName))].filter(Boolean);
-    dropdown.innerHTML = '';
-    
-    const matches = uniqueCustomers.filter(c => c.toLowerCase().includes(filter));
-    if(matches.length > 0) {
-        matches.forEach(c => {
-            const row = document.createElement('div');
-            row.className = "px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors";
-            row.innerText = c;
-            row.onmousedown = () => { input.value = c; dropdown.classList.add('hidden'); };
-            dropdown.appendChild(row);
-        });
-        dropdown.classList.remove('hidden'); dropdown.classList.add('flex');
-    } else { dropdown.classList.add('hidden'); dropdown.classList.remove('flex'); }
-}
-
-function checkoutCart() {
-    const customer = document.getElementById('pos-customer').value.trim();
-    if(cart.length === 0) { showToast("Add items to cart first", "error"); return; }
-    if(!customer) { showToast("Customer name is required", "error"); document.getElementById('pos-customer').focus(); return; }
-    
-    const existingActive = orders.find(o => o.customerName.toLowerCase() === customer.toLowerCase() && !o.isPaid && o.status !== 'cancelled' && o.id !== editingOrderId);
-    if (existingActive) {
-        showToast(`Customer already has an active unpaid order (${existingActive.id}). Complete that transaction first.`, "error");
-        return;
-    }
-
-    const cartCalc = calculateCart();
-    const totalVal = cartCalc.total;
-    let totalPaid = parseFloat(document.getElementById('pos-paid-amount').value) || 0;
-    if(document.getElementById('pos-paid-full').checked) totalPaid = totalVal;
-
-    let aggregateCost = 0;
-    const itemsStructure = cart.map(item => {
-        const calcItem = cartCalc.items.find(c => c.id === item.id);
-        const itemCost = item.qty * item.unitCost;
-        aggregateCost += itemCost;
-        
-        return {
-            id: item.id,
-            name: item.name,
-            qty: item.qty,
-            sellPrice: item.sellPrice,
-            unitCost: item.unitCost,
-            effectiveTotal: calcItem.effectiveTotal,
-            totalCost: itemCost,
-            totalProfit: calcItem.effectiveTotal - itemCost
-        };
-    });
-
-    cart.forEach(cartItem => {
-        const invItem = inventory.find(i => i.id === cartItem.id); 
-        if(invItem) invItem.stockQty -= cartItem.qty;
-    });
-
-    if (editingOrderId) {
-        const targetOrder = orders.find(o => o.id === editingOrderId);
-        if (targetOrder) {
-            targetOrder.customerName = customer;
-            targetOrder.items = itemsStructure;
-            targetOrder.totalRevenue = totalVal;
-            targetOrder.totalCost = aggregateCost;
-            targetOrder.totalProfit = totalVal - aggregateCost;
-            targetOrder.amountPaid = totalPaid;
-            targetOrder.isPaid = totalPaid >= totalVal - 0.01;
-            targetOrder.isEdited = true;
-            
-            logActivity('sale', `Updated existing transaction invoice ${editingOrderId} for ${customer}`);
-            showToast("Order transaction modified successfully", "success");
-        }
-        editingOrderId = null;
-    } else {
-        const newReceiptNum = 'ORD-' + Date.now().toString().slice(-6) + '-' + Math.random().toString(36).substr(2,3).toUpperCase();
-        orders.push({
-            id: newReceiptNum,
-            customerName: customer,
-            items: itemsStructure,
-            totalRevenue: totalVal,
-            totalCost: aggregateCost,
-            totalProfit: totalVal - aggregateCost,
-            amountPaid: totalPaid,
-            isPaid: totalPaid >= totalVal - 0.01,
-            isReceived: false,
-            status: 'active',
-            isEdited: false,
-            date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-        });
-        logActivity('sale', `Generated new cash invoice ${newReceiptNum} for ${customer}`);
-        showToast("Sale completed successfully", "success");
-    }
-
-    saveInventory();
-    saveOrders();
-    saveActivityLog();
-    
-    cart = [];
-    document.getElementById('pos-customer').value = '';
-    const pf = document.getElementById('pos-paid-full');
-    if(pf) pf.checked = false;
-    const pamt = document.getElementById('pos-paid-amount');
-    if(pamt) { pamt.disabled = false; pamt.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700'); pamt.value = ''; }
-    
-    renderCart();
-    toggleMobileCart(false);
-    switchTab('orders');
-}
-
-// ================= ORDERS HISTORY IMPLEMENTATIONS =================
+// ================= TRANSACTION POST LOGIC =================
 function setOrderTab(tab) {
     currentOrderTab = tab;
-    
-    const tabIds = ['all', 'active', 'completed', 'cancelled'];
-    tabIds.forEach(id => {
-        const btn = document.getElementById(`tab-${id}-orders`);
-        if(!btn) return;
-        if(id === tab) {
-            btn.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition-all duration-200 whitespace-nowrap";
-        } else {
-            btn.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-200 whitespace-nowrap";
-        }
+    document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+        btn.className = "flex-1 md:flex-none px-3 py-1.5 text-[10px] font-semibold rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-200 whitespace-nowrap";
     });
-
-    currentOrdersPage = 1; 
+    const activeBtn = document.getElementById(`tab-${tab}-orders`);
+    if (activeBtn) {
+        activeBtn.className = "flex-1 md:flex-none px-3 py-1.5 text-[10px] font-semibold rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs hover:text-slate-900 transition-all duration-200 whitespace-nowrap";
+    }
+    currentOrdersPage = 1;
     renderOrdersTable();
 }
 
@@ -1259,7 +1181,6 @@ function changeRowsPerPage() { ordersPerPage = parseInt(document.getElementById(
 function prevOrdersPage() { if (currentOrdersPage > 1) { currentOrdersPage--; renderOrdersTable(); } }
 function nextOrdersPage() { let filtered = getFilteredOrders(); if (currentOrdersPage < Math.ceil(filtered.length / ordersPerPage)) { currentOrdersPage++; renderOrdersTable(); } }
 
-// Re-engineered Multi-Direction Click Sort Mapping Cycles
 function toggleOrderSort(column) {
     if (orderSortColumn === column) {
         if (orderSortDirection === 'none') orderSortDirection = 'asc';
@@ -1274,7 +1195,7 @@ function toggleOrderSort(column) {
 }
 
 function updateSortIndicators() {
-    const columns = ['id', 'customer', 'date', 'total', 'payment', 'delivery'];
+    const columns = ['customer', 'date', 'total', 'payment', 'delivery'];
     columns.forEach(col => {
         const el = document.getElementById(`sort-icon-${col}`);
         if (!el) return;
@@ -1289,20 +1210,20 @@ function updateSortIndicators() {
 function getFilteredOrders() {
     let filtered = [...orders];
     
-    // 1. Structural Tab Category Filter Parameters Lookup
-    if (currentOrderTab === 'cancelled') {
-        filtered = filtered.filter(o => o.status === 'cancelled');
-    } else if (currentOrderTab === 'active') {
-        filtered = filtered.filter(o => o.status !== 'cancelled' && !o.isPaid);
-    } else if (currentOrderTab === 'completed') {
-        filtered = filtered.filter(o => o.status !== 'cancelled' && o.isPaid);
-    } else {
-        // Tab key matches 'all' tracking state view parameters
-        if (currentFilter === 'unpaid') filtered = filtered.filter(o => !o.isPaid && o.status !== 'cancelled');
-        if (currentFilter === 'pending') filtered = filtered.filter(o => !o.isReceived && o.status !== 'cancelled');
+    switch (currentOrderTab) {
+        case 'cancelled':
+            filtered = filtered.filter(o => o.status === 'cancelled');
+            break;
+        case 'active':
+            filtered = filtered.filter(o => o.status !== 'cancelled' && !o.isPaid);
+            break;
+        case 'completed':
+            filtered = filtered.filter(o => o.status !== 'cancelled' && o.isPaid);
+            break;
+        default:
+            break;
     }
 
-    // 2. Continuous Input Query Text Filter Synchronization Lookups
     const searchVal = (document.getElementById('history-search')?.value || '').trim().toLowerCase();
     if (searchVal) {
         filtered = filtered.filter(o => {
@@ -1313,13 +1234,9 @@ function getFilteredOrders() {
         });
     }
 
-    // 3. Click Header Column Sort Engine Pipeline Lookups
     if (orderSortColumn && orderSortDirection !== 'none') {
         const dirModifier = orderSortDirection === 'asc' ? 1 : -1;
         filtered.sort((a, b) => {
-            if (orderSortColumn === 'id') {
-                return a.id.localeCompare(b.id) * dirModifier;
-            }
             if (orderSortColumn === 'customer') {
                 return a.customerName.localeCompare(b.customerName) * dirModifier;
             }
@@ -1342,7 +1259,6 @@ function getFilteredOrders() {
             return 0;
         });
     } else {
-        // Fallback structural chronological descending pipeline order mapping
         filtered.sort((a, b) => b.id.localeCompare(a.id));
     }
     
@@ -1421,6 +1337,7 @@ function editOrder(id) {
     saveInventory();
     renderCart();
     switchTab('orders');
+    openCartModal();
     showToast(`Loaded invoice ${order.id} into active basket`, "info");
 }
 
@@ -1464,7 +1381,7 @@ function renderOrdersTable() {
                     : `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-800/30 uppercase tracking-wider hover:bg-rose-100"><i data-lucide="alert-circle" class="w-3 h-3"></i> Unpaid</button>`));
         
         const delBtn = isCancelled ? `<span class="text-slate-400 font-bold text-xl">-</span>` 
-            : (order.isReceived ? `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 uppercase tracking-wider"><i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-500"></i> Delivered</button>`
+            : (order.isReceived ? `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200/70 hover:bg-slate-200 uppercase tracking-wider"><i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-500"></i> Delivered</button>`
                 : `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-white dark:bg-slate-900 text-slate-500 rounded-lg border border-slate-200/70 shadow-sm hover:bg-slate-50 uppercase tracking-wider"><i data-lucide="truck" class="w-3.5 h-3.5 text-amber-500"></i> Pending</button>`);
 
         const editBadge = order.isEdited && !isCancelled ? `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 align-middle">Edited</span>` : '';
@@ -1485,10 +1402,8 @@ function renderOrdersTable() {
         const row = document.createElement('tr');
         row.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer " + (isCancelled ? 'opacity-50 grayscale bg-slate-50/30 dark:bg-slate-900/20' : '');
         
-        // Entire row click opens Order DetailsPopup context cleanly
         row.onclick = () => { generateReceipt(order.id); };
 
-        // Realigned columns - perfectly lining up with header classes
         row.innerHTML = `
             <td class="w-[20%] py-3 px-4 sm:px-5 truncate-cell">
                 <div class="font-bold text-sm text-slate-900 dark:text-white truncate" title="${order.customerName}">${order.customerName}${editBadge}</div>
@@ -1518,8 +1433,159 @@ function renderOrdersTable() {
     }); initIcons();
 }
 
-// ================= SUPPLIER ACCOUNTS PAYABLE & PURCHASES MODULE =================
+// ================= CHECKOUT & CLEAR CART =================
+function clearCart() {
+    if (cart.length === 0) {
+        showToast("Cart is already empty", "info");
+        return;
+    }
+    requestUserConfirmation("Clear Cart", "This will remove all items from your current cart. Are you sure?", "Clear", () => {
+        if (editingOrderId) {
+            const order = orders.find(o => o.id === editingOrderId);
+            if (order) {
+                getOrderItems(order).forEach(item => {
+                    const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+                    if (invItem) invItem.stockQty += item.qty;
+                });
+                saveInventory();
+            }
+            editingOrderId = null;
+            const modeBadge = document.getElementById('cart-mode-badge');
+            const actionBtn = document.getElementById('cart-action-btn');
+            const cartTitle = document.getElementById('cart-title');
+            if (modeBadge) modeBadge.classList.add('hidden');
+            if (actionBtn) actionBtn.innerText = "Clear";
+            if (cartTitle) cartTitle.innerText = "Current Cart";
+            document.getElementById('pos-customer').value = '';
+            const pAmtInput = document.getElementById('pos-paid-amount');
+            const pFullCheck = document.getElementById('pos-paid-full');
+            if (pFullCheck) pFullCheck.checked = false;
+            if (pAmtInput) {
+                pAmtInput.disabled = false;
+                pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+                pAmtInput.value = '';
+            }
+        }
+        cart = [];
+        renderCart();
+        closeCartModal();
+        showToast("Cart cleared", "info");
+    });
+}
 
+function checkoutCart() {
+    if (cart.length === 0) { showToast("Cart is empty", "error"); return; }
+    const customerName = document.getElementById('pos-customer').value.trim() || "Walk-in Customer";
+    const paidAmount = parseFloat(document.getElementById('pos-paid-amount').value) || 0;
+    const cartCalc = calculateCart();
+    const totalDue = cartCalc.total;
+
+    if (paidAmount > totalDue) { showToast("Payment exceeds total due", "error"); return; }
+
+    cart.forEach(item => {
+        const invItem = inventory.find(i => i.id === item.id);
+        if (invItem) {
+            invItem.stockQty -= item.qty;
+        }
+    });
+
+    const orderItems = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        qty: item.qty,
+        sellPrice: item.sellPrice,
+        unitCost: item.unitCost,
+        effectiveTotal: item.qty * item.sellPrice,
+        totalCost: item.qty * (item.unitCost || 0),
+        totalProfit: item.qty * ((item.sellPrice || 0) - (item.unitCost || 0))
+    }));
+
+    const totalRevenue = cartCalc.total;
+    const totalCost = orderItems.reduce((sum, i) => sum + i.totalCost, 0);
+    const totalProfit = totalRevenue - totalCost;
+
+    const order = {
+        id: 'ORD-' + Date.now().toString().slice(-6),
+        customerName: customerName,
+        date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        items: orderItems,
+        totalRevenue: totalRevenue,
+        totalCost: totalCost,
+        totalProfit: totalProfit,
+        amountPaid: paidAmount,
+        isPaid: paidAmount >= totalDue,
+        isReceived: false,
+        status: 'active',
+        isEdited: false
+    };
+
+    orders.push(order);
+    logActivity('sale', `Sale to ${customerName}: ${order.id} for ₱${totalRevenue.toFixed(2)}`);
+
+    cart = [];
+    if (editingOrderId) editingOrderId = null;
+    document.getElementById('pos-customer').value = '';
+    document.getElementById('pos-paid-amount').value = '';
+    document.getElementById('pos-paid-full').checked = false;
+    const modeBadge = document.getElementById('cart-mode-badge');
+    const actionBtn = document.getElementById('cart-action-btn');
+    const cartTitle = document.getElementById('cart-title');
+    if (modeBadge) modeBadge.classList.add('hidden');
+    if (actionBtn) actionBtn.innerText = "Clear";
+    if (cartTitle) cartTitle.innerText = "Current Cart";
+
+    saveOrders();
+    saveInventory();
+    saveActivityLog();
+    renderCart();
+    renderUI();
+    showToast(`Order ${order.id} completed successfully!`, "success");
+    closeCartModal();
+    generateReceipt(order.id);
+}
+
+function togglePaidFullCheck(checkbox) {
+    const total = parseFloat(document.getElementById('cart-total-display').innerText) || 0;
+    const paidInput = document.getElementById('pos-paid-amount');
+    if (checkbox.checked) {
+        paidInput.value = total.toFixed(2);
+        paidInput.disabled = true;
+        paidInput.classList.add('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+    } else {
+        paidInput.value = '';
+        paidInput.disabled = false;
+        paidInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+    }
+}
+
+function filterCustomers() {
+    const input = document.getElementById('pos-customer');
+    const dropdown = document.getElementById('customer-dropdown');
+    if (!input || !dropdown) return;
+    const query = input.value.trim().toLowerCase();
+    const distinctCustomers = [...new Set(orders.map(o => o.customerName))].filter(Boolean);
+    dropdown.innerHTML = '';
+    const matches = distinctCustomers.filter(c => c.toLowerCase().includes(query));
+    if (matches.length > 0 && query.length > 0) {
+        matches.forEach(c => {
+            const div = document.createElement('div');
+            div.className = "px-4 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors";
+            div.innerText = c;
+            div.onmousedown = () => {
+                input.value = c;
+                dropdown.classList.add('hidden');
+            };
+            dropdown.appendChild(div);
+        });
+        dropdown.classList.remove('hidden');
+        dropdown.classList.add('flex');
+    } else {
+        dropdown.classList.add('hidden');
+        dropdown.classList.remove('flex');
+    }
+}
+
+// ================= SUPPLIER MODULE =================
 function filterSuppliers() {
     const input = document.getElementById('bnpl-supplier');
     const dropdown = document.getElementById('supplier-dropdown');
@@ -1891,9 +1957,9 @@ function setBnplHistoryFilter(f) {
     currentApFilter = f;
     document.querySelectorAll('[data-ap-btn]').forEach(btn => {
         if(btn.dataset.apBtn === f) {
-            btn.className = "px-2.5 py-1.5 rounded bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white uppercase tracking-wider font-bold";
+            btn.className = "flex-1 sm:flex-none px-2.5 py-1.5 rounded bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white uppercase tracking-wider font-bold";
         } else {
-            btn.className = "px-2.5 py-1.5 rounded text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 uppercase tracking-wider font-bold";
+            btn.className = "flex-1 sm:flex-none px-2.5 py-1.5 rounded text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 uppercase tracking-wider font-bold";
         }
     });
     renderBnplTable();
@@ -1948,7 +2014,7 @@ function renderBnplTable() {
                 </td>
                 <td class="py-3 px-3 min-w-[150px]">${itemsStr}</td>
                 <td class="py-3 px-3 text-right">
-                    <div class="font-black text-slate-800 dark:text-slate-200">Total: ₱ ${b.totalAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div class="font-black text-slate-800 dark:text-white">Total: ₱ ${b.totalAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                     <div class="text-[10px] text-emerald-600 font-bold mt-0.5">Paid: ₱ ${(b.amountPaid || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                     <div class="text-[10px] text-rose-500 font-bold mt-0.5">Bal: ₱ ${unpaidBal.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                 </td>
@@ -2049,11 +2115,20 @@ function generateReceipt(orderId) {
     const statusLine = order.status === 'cancelled' ? 'VOID/CANCELLED' : (order.isPaid ? 'FULLY PAID' : (paidVal > 0 ? `PARTIAL (₱ ${(order.totalRevenue - paidVal).toFixed(2)} Bal)` : 'UNPAID'));
     
     let itemsInvoiceMatrix = '';
+    let totalDiscount = 0;
+    
     getOrderItems(order).forEach(i => {
-        itemsInvoiceMatrix += `${i.name.padEnd(18)} x${i.qty.toString().padEnd(2)} ₱ ${i.effectiveTotal.toFixed(2).padStart(8)}\n`;
+        const originalSubtotal = i.qty * (i.sellPrice || 0);
+        const itemDiscount = originalSubtotal - (i.effectiveTotal || originalSubtotal);
+        totalDiscount += itemDiscount;
+        
+        itemsInvoiceMatrix += `${i.name.padEnd(16)} x${i.qty.toString().padEnd(2)} ₱ ${originalSubtotal.toFixed(2).padStart(8)}\n`;
+        if (itemDiscount > 0.01) {
+            itemsInvoiceMatrix += `  Discount:         -₱ ${itemDiscount.toFixed(2).padStart(8)}\n`;
+        }
     });
 
-    document.getElementById('receipt-text').innerText = `================================\n      CHEOREOBIZ INVOICE\n================================\nDate: ${order.date || "N/A"}\nTxn : ${order.id}\n${order.isEdited ? '(Invoice reflects edited items)\n' : ''}Billed To: ${order.customerName}\n\nLine Items:\n--------------------------------\n${itemsInvoiceMatrix}--------------------------------\nGrand Total:        ₱ ${order.totalRevenue.toFixed(2).padStart(10)}\nAmount Paid:        ₱ ${paidVal.toFixed(2).padStart(10)}\nBalance Due:        ₱ ${(order.totalRevenue - paidVal).toFixed(2).padStart(10)}\n--------------------------------\nPayment:  ${statusLine}\nDelivery: ${order.isReceived ? 'Fulfilled' : 'Pending'}\n\nThank you for your business!\n================================`;
+    document.getElementById('receipt-text').innerText = `================================\n      CHEOREOBIZ INVOICE\n================================\nDate: ${order.date || "N/A"}\nTxn : ${order.id}\n${order.isEdited ? '(Invoice reflects edited items)\n' : ''}Billed To: ${order.customerName}\n\nLine Items:\n--------------------------------\n${itemsInvoiceMatrix}--------------------------------\nSubtotal:           ₱ ${(order.totalRevenue + totalDiscount).toFixed(2).padStart(10)}\nTotal Discount:    -₱ ${totalDiscount.toFixed(2).padStart(10)}\nGrand Total:        ₱ ${order.totalRevenue.toFixed(2).padStart(10)}\nAmount Paid:        ₱ ${paidVal.toFixed(2).padStart(10)}\nBalance Due:        ₱ ${(order.totalRevenue - paidVal).toFixed(2).padStart(10)}\n--------------------------------\nPayment:  ${statusLine}\nDelivery: ${order.isReceived ? 'Fulfilled' : 'Pending'}\n\nThank you for your business!\n================================`;
     openModal('receipt-modal');
 }
 
@@ -2074,32 +2149,25 @@ function exportData() {
     a.download = `cheoreobiz_backup_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.remove(); showToast("Backup downloaded", "success");
 }
 
-function importData(event) {
-    const file = event.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            if(data.inventory) inventory = data.inventory; if(data.orders) orders = data.orders; if(data.bundles) bundles = data.bundles; if(data.activityLog) activityLog = data.activityLog; if(data.stockHistory) stockHistory = data.stockHistory; if(data.bnplRecords) bnplRecords = data.bnplRecords;
-            
-            saveInventory();
-            saveOrders();
-            saveBundles();
-            saveActivityLog();
-            saveStockHistory();
-            saveBnpl();
-
-            showToast("System restored", "success"); document.getElementById('import-file').value = '';
-        } catch(err) { showToast("Invalid backup file format", "error"); }
-    }; reader.readAsText(file);
-}
-
 // ================= SUMMARY / STATS KPI LOGIC =================
 function renderSummary() {
     let revenue = 0; let profit = 0; let totalSpent = 0;
+    let completedOrdersCount = 0; 
+    let completedOrdersTotalValue = 0;
 
     let validOrders = orders.filter(o => o.status !== 'cancelled' && isWithinTimeframe(o.date, dashboardTimeframe));
-    validOrders.forEach(o => { revenue += o.totalRevenue; profit += o.totalProfit; });
+    validOrders.forEach(o => { 
+        revenue += o.totalRevenue; 
+        if (o.isPaid === true && o.isReceived === true) {
+            completedOrdersCount++; 
+            completedOrdersTotalValue += o.totalRevenue;
+            if (o.totalProfit !== undefined) {
+                profit += o.totalProfit;
+            } else {
+                profit += (o.totalRevenue - (o.totalCost || 0));
+            }
+        }
+    });
 
     let pendingBalance = 0;
     orders.forEach(o => { if(o.status !== 'cancelled') pendingBalance += (o.totalRevenue - (o.amountPaid || 0)); });
@@ -2130,6 +2198,8 @@ function renderSummary() {
     const revEl = document.getElementById('summary-revenue');
     const profEl = document.getElementById('summary-profit');
     const roiEl = document.getElementById('summary-roi');
+    const completedOrdersEl = document.getElementById('summary-completed-orders');
+    const completedValueEl = document.getElementById('summary-completed-value-display');
     const apBalEl = document.getElementById('stat-pending-balance');
 
     const dValueEl = document.getElementById('dash-inv-value');
@@ -2149,6 +2219,13 @@ function renderSummary() {
         const spentDivisor = totalSpent || inventoryVal;
         const roi = spentDivisor > 0 ? (profit / spentDivisor) * 100 : 0;
         roiEl.innerText = `${roi.toFixed(1)}% ROI`;
+    }
+
+    if (completedOrdersEl) {
+        completedOrdersEl.innerText = `${completedOrdersCount} Completed Orders`;
+    }
+    if (completedValueEl) {
+        completedValueEl.innerText = completedOrdersTotalValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
     }
 
     if(dValueEl) dValueEl.innerText = inventoryVal.toLocaleString(undefined, {minimumFractionDigits: 2});
