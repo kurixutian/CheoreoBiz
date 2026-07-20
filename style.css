@@ -1,4 +1,8 @@
-/* ================= CUSTOM SCROLLBARS ================= */
+/* ==========================================================================
+   CheoreoBiz Ledger — Core Architecture Stylesheet
+   ========================================================================== */
+
+/* Modern Scrollbar Engine Overrides */
 ::-webkit-scrollbar {
     height: 6px;
     width: 6px;
@@ -11,6 +15,7 @@
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 10px;
+    transition: background 0.2s ease;
 }
 
 .dark ::-webkit-scrollbar-thumb {
@@ -21,7 +26,11 @@
     background: #94a3b8;
 }
 
-/* Scrollable Inner Content Scrollbars */
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Scrollable Inner Components Utility Scrollbars */
 .custom-scrollbar::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -44,56 +53,65 @@
     background: #94a3b8;
 }
 
-/* Hide navigation scrollbars */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Hide navigation scrollbars while keeping execution functional */
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
 
 .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-/* ================= UTILITY CLASSES ================= */
+/* ==========================================================================
+   UI / UX DESIGN REFINEMENTS & CORE COMPONENT STYLES
+   ========================================================================== */
+
+/* Premium Frosted Glass Panels */
 .glass-panel {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
-/* Tab Highlights */
-.tab-active {
-    color: #4f46e5;
-    border-bottom-color: #4f46e5;
-    background-color: #eef2ff;
+/* Premium Adaptive Input Focus Transitions */
+input, select, textarea {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dark .tab-active {
-    color: #818cf8;
-    border-bottom-color: #818cf8;
-    background-color: rgba(99, 102, 241, 0.1);
+/* Form Interaction Enhancement State Matrix */
+input:focus, select:focus, textarea:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
 }
 
-/* Hide arrows in number inputs */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+/* Premium Card Hover Shadows and Transformations */
+.bg-white.dark\:bg-slate-800 {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-input[type=number] {
-    -moz-appearance: textfield; /* Firefox */
-}
-
-/* Smooth transitions */
+/* Button Utility Wrapper */
 .btn-transition {
+    position: relative;
+    overflow: hidden;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-transition:active {
-    transform: scale(0.97);
+    transform: scale(0.96) translateY(1px);
 }
 
-/* Hide default details marker for cleaner collapsible menus */
+/* Premium Dynamic Dropdown Matrix */
+#custom-dropdown, #customer-dropdown, #supplier-dropdown, #batch-item-dropdown {
+    animation: scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(8px);
+}
+
+/* Details Collapsible Chevron resets */
 details > summary {
     list-style: none;
 }
@@ -102,23 +120,86 @@ details > summary::-webkit-details-marker {
     display: none;
 }
 
-/* ================= TABLE LAYOUTS & SCANNABILITY ================= */
-/* Enforce strict layout rules for aligned headers and rows */
+/* Native Number Field Reset Utility */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* ==========================================================================
+   SOLID FLUSH MOBILE BOTTOM NAVIGATION & FAB FIXES
+   ========================================================================== */
+
+@media (max-width: 1279px) {
+    /* Mobile bottom navigation bar stitched directly flush to the bottom edge */
+    #mobile-bottom-nav {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 60px !important;
+        background-color: rgba(255, 255, 255, 0.92) !important;
+        border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04) !important;
+        z-index: 50 !important;
+        border-radius: 0px !important;
+        margin: 0px !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .dark #mobile-bottom-nav {
+        background-color: rgba(15, 23, 42, 0.92) !important;
+        border-top: 1px solid rgba(51, 65, 85, 0.5) !important;
+        box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    #mobile-bottom-nav button.tab-active {
+        color: #4f46e5 !important;
+        background-color: #f0f4ff !important;
+        border-radius: 0.75rem;
+    }
+
+    .dark #mobile-bottom-nav button.tab-active {
+        color: #818cf8 !important;
+        background-color: rgba(99, 102, 241, 0.15) !important;
+    }
+
+    /* Floating Action Cart Trigger Placement */
+    #mobile-cart-fab-container {
+        position: fixed !important;
+        bottom: 80px !important;
+        right: 20px !important;
+        z-index: 45 !important;
+    }
+
+    /* Bottom viewport padding buffer */
+    main {
+        padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+    }
+}
+
+/* ==========================================================================
+   TABLE LIFECYCLE CONTRAST & GRID DATA DESIGN SCANNABILITY 
+   ========================================================================== */
+
 table.table-fixed {
     table-layout: fixed;
     width: 100%;
 }
 
-/* Sticky Headers */
 thead th {
     position: sticky;
     top: 0;
     z-index: 10;
 }
 
-/* Consistent row height and alignment */
 tbody tr {
-    height: 58px;
+    height: 52px;
     transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -126,20 +207,87 @@ tbody td {
     vertical-align: middle;
 }
 
-/* Precise layout limits for typography containment */
 .truncate-cell {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* ================= MODERN SEGMENTED PILL TAB LAYOUT ================= */
-/* Smooth active state transitions */
-#tab-all-orders,
-#tab-active-orders,
-#tab-completed-orders,
-#tab-cancelled-orders {
-    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    user-select: none;
+.tab-active {
+    color: #4f46e5;
+    background-color: #eef2ff;
+    border-color: transparent;
+}
+
+.dark .tab-active {
+    color: #818cf8;
+    background-color: rgba(99, 102, 241, 0.1);
+    border-color: transparent;
+}
+
+/* ==========================================================================
+   SMART PRODUCT SUGGESTIONS ENGINE INTERFACE MATRIX
+   ========================================================================== */
+
+#smart-suggestions-section {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.suggestion-item-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.suggestion-item-card:hover {
+    transform: translateX(3px);
+    background-color: rgba(79, 70, 229, 0.03);
+    border-color: rgba(79, 70, 229, 0.2);
+}
+
+.dark .suggestion-item-card:hover {
+    background-color: rgba(129, 140, 248, 0.04);
+    border-color: rgba(129, 140, 248, 0.25);
+}
+
+/* ==========================================================================
+   ADDITIONAL RESPONSIVE REFINEMENTS — DESKTOP
+   ========================================================================== */
+
+@media (min-width: 1280px) {
+    #mobile-bottom-nav {
+        display: none !important;
+    }
+
+    main {
+        padding-bottom: 0 !important;
+    }
+}
+
+/* ==========================================================================
+   ANIMATION UTILITY — SCALE IN FOR DROPDOWNS & MODALS
+   ========================================================================== */
+
+@keyframes scaleIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.96) translateY(-4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ==========================================================================
+   SAFE AREA INSET SUPPORT FOR NOTCH DEVICES
+   ========================================================================== */
+
+@supports (padding: max(0px)) {
+    #mobile-bottom-nav {
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        height: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    main {
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    }
 }
