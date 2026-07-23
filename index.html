@@ -346,7 +346,7 @@
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
                         
                         <!-- Collapsible Form -->
-                        <details class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm xl:col-span-1 group" open>
+                        <details id="inventory-form-container" class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm xl:col-span-1 group" open>
                             <summary class="p-4 sm:p-6 border-b border-slate-200/80 dark:border-slate-700/60 flex justify-between items-center cursor-pointer select-none focus:outline-none">
                                 <h2 class="text-base font-black flex items-center gap-2 text-slate-900 dark:text-white">
                                     <i data-lucide="plus-circle" class="w-5 h-5 text-indigo-500"></i> Register New Product
@@ -403,14 +403,28 @@
                             <div class="overflow-x-auto flex-1 custom-scrollbar">
                                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                                     <thead class="bg-slate-50 dark:bg-slate-900/50">
-                                        <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase whitespace-nowrap">
-                                            <th class="py-3 px-4 sm:px-5">Product Details</th>
-                                            <th class="py-3 px-3 sm:px-4 text-center">Current Stock</th>
-                                            <th class="py-3 px-3 sm:px-4 text-right">Calculated CPP</th>
-                                            <th class="py-3 px-3 sm:px-4 text-right">Selling Price</th>
-                                            <th class="py-3 px-3 sm:px-4 text-right text-emerald-600">Profit / Pc</th>
-                                            <th class="py-3 px-3 sm:px-4 text-right text-indigo-500">Margin</th>
-                                            <th class="py-3 px-3 sm:px-4 text-right">Inventory Value</th>
+                                        <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase whitespace-nowrap select-none">
+                                            <th onclick="toggleInventorySort('name', event)" class="py-3 px-4 sm:px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center gap-1">Product Details <span id="sort-icon-inv-name" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleInventorySort('stock', event)" class="py-3 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-center gap-1">Current Stock <span id="sort-icon-inv-stock" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleInventorySort('cpp', event)" class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-end gap-1">Calculated CPP <span id="sort-icon-inv-cpp" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleInventorySort('price', event)" class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-end gap-1">Selling Price <span id="sort-icon-inv-price" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleInventorySort('profit', event)" class="py-3 px-3 sm:px-4 text-right text-emerald-600 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-end gap-1">Profit / Pc <span id="sort-icon-inv-profit" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleInventorySort('margin', event)" class="py-3 px-3 sm:px-4 text-right text-indigo-500 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-end gap-1">Margin <span id="sort-icon-inv-margin" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleInventorySort('value', event)" class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-end gap-1">Inventory Value <span id="sort-icon-inv-value" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
                                             <th class="py-3 px-4 sm:px-5 text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -426,7 +440,7 @@
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
                         
                         <!-- Collapsible Form -->
-                        <details class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm xl:col-span-1 group" open>
+                        <details id="bundle-form-container" class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm xl:col-span-1 group" open>
                             <summary class="p-4 sm:p-6 border-b border-slate-200/80 dark:border-slate-700/60 flex justify-between items-center cursor-pointer select-none focus:outline-none">
                                 <h2 class="text-base font-black flex items-center gap-2 text-slate-900 dark:text-white">
                                     <i data-lucide="tags" class="w-5 h-5 text-indigo-500"></i> Manage Promos
@@ -484,11 +498,19 @@
                             <div class="overflow-x-auto flex-1 custom-scrollbar">
                                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                                     <thead class="bg-slate-50 dark:bg-slate-900/50">
-                                        <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                                            <th class="py-3 px-4 sm:px-5">Bundle Name</th>
-                                            <th class="py-3 px-3 sm:px-4">Includes</th>
-                                            <th class="py-3 px-3 sm:px-4 text-right">Price</th>
-                                            <th class="py-3 px-3 sm:px-4 text-center">Status</th>
+                                        <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase select-none">
+                                            <th onclick="toggleBundleSort('name', event)" class="py-3 px-4 sm:px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center gap-1">Bundle Name <span id="sort-icon-bundle-name" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleBundleSort('includes', event)" class="py-3 px-3 sm:px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center gap-1">Includes <span id="sort-icon-bundle-includes" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleBundleSort('price', event)" class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-end gap-1">Price <span id="sort-icon-bundle-price" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleBundleSort('status', event)" class="py-3 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-center gap-1">Status <span id="sort-icon-bundle-status" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
                                             <th class="py-3 px-4 sm:px-5 text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -652,22 +674,22 @@
                             <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 table-fixed">
                                 <thead class="bg-slate-50 dark:bg-slate-900/50">
                                     <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase whitespace-nowrap select-none">
-                                        <th onclick="toggleOrderSort('customer')" class="w-[20%] py-3.5 px-4 sm:px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                        <th onclick="toggleOrderSort('customer', event)" class="w-[20%] py-3.5 px-4 sm:px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                             <div class="flex items-center gap-1">Customer Name <span id="sort-icon-customer" class="text-indigo-500 font-bold"></span></div>
                                         </th>
-                                        <th onclick="toggleOrderSort('date')" class="w-[15%] py-3.5 px-3 sm:px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                        <th onclick="toggleOrderSort('date', event)" class="w-[15%] py-3.5 px-3 sm:px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                             <div class="flex items-center gap-1">Date & Time <span id="sort-icon-date" class="text-indigo-500 font-bold"></span></div>
                                         </th>
                                         <th class="w-[25%] py-3.5 px-3 sm:px-4 text-left">
                                             <div class="flex items-center gap-1">Items</div>
                                         </th>
-                                        <th onclick="toggleOrderSort('total')" class="w-[13%] py-3.5 px-3 sm:px-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                        <th onclick="toggleOrderSort('total', event)" class="w-[13%] py-3.5 px-3 sm:px-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                             <div class="flex items-center justify-end gap-1">Grand Total <span id="sort-icon-total" class="text-indigo-500 font-bold"></span></div>
                                         </th>
-                                        <th onclick="toggleOrderSort('payment')" class="w-[12%] py-3.5 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                        <th onclick="toggleOrderSort('payment', event)" class="w-[12%] py-3.5 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                             <div class="flex items-center justify-center gap-1">Payment Status <span id="sort-icon-payment" class="text-indigo-500 font-bold"></span></div>
                                         </th>
-                                        <th onclick="toggleOrderSort('delivery')" class="w-[12%] py-3.5 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                        <th onclick="toggleOrderSort('delivery', event)" class="w-[12%] py-3.5 px-3 sm:px-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                             <div class="flex items-center justify-center gap-1">Delivery Status <span id="sort-icon-delivery" class="text-indigo-500 font-bold"></span></div>
                                         </th>
                                         <th class="w-[8%] py-3.5 px-4 sm:px-5 text-right">Actions</th>
@@ -721,7 +743,7 @@
 
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
                         <!-- Log Supplier Purchase Entry Form Panel -->
-                        <details class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm xl:col-span-1 group" open>
+                        <details id="bnpl-form-container" class="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm xl:col-span-1 group" open>
                             <summary class="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-700/60 flex justify-between items-center cursor-pointer select-none focus:outline-none">
                                 <h2 class="text-sm font-black flex items-center gap-2 text-slate-900 dark:text-white">
                                     <i data-lucide="truck" class="w-4 h-4 text-indigo-500"></i> Log Supplier Purchase
@@ -805,7 +827,7 @@
                             <div class="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                 <h2 class="text-sm font-black flex items-center gap-2 text-slate-900 dark:text-white">
                                     <i data-lucide="clock" class="w-4 h-4 text-indigo-500"></i> Accounts Payable History Ledger
-                               </h2>
+                                </h2>
                                 
                                 <div id="bnpl-history-filters" class="flex bg-slate-100 dark:bg-slate-900/50 p-1 rounded-lg text-[10px] font-bold border border-slate-200 dark:border-slate-700/50 w-full sm:w-auto">
                                     <button onclick="setBnplHistoryFilter('all')" data-ap-btn="all" class="flex-1 sm:flex-none px-2.5 py-1.5 rounded bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white uppercase tracking-wider">All</button>
@@ -817,12 +839,22 @@
                             <div class="overflow-x-auto flex-1 custom-scrollbar">
                                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                                     <thead class="bg-slate-50 dark:bg-slate-900/50">
-                                        <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase whitespace-nowrap">
-                                            <th class="py-3 px-4">Supplier & Batch</th>
-                                            <th class="py-3 px-3">Dates</th>
-                                            <th class="py-3 px-3">Product Details</th>
-                                            <th class="py-3 px-3 text-right">Financials</th>
-                                            <th class="py-3 px-3 text-center">Status</th>
+                                        <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase whitespace-nowrap select-none">
+                                            <th onclick="toggleBnplSort('supplier', event)" class="py-3 px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center gap-1">Supplier & Batch <span id="sort-icon-bnpl-supplier" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleBnplSort('date', event)" class="py-3 px-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center gap-1">Dates <span id="sort-icon-bnpl-date" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleBnplSort('product', event)" class="py-3 px-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center gap-1">Product Details <span id="sort-icon-bnpl-product" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleBnplSort('financials', event)" class="py-3 px-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-end gap-1">Financials <span id="sort-icon-bnpl-financials" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
+                                            <th onclick="toggleBnplSort('status', event)" class="py-3 px-3 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div class="flex items-center justify-center gap-1">Status <span id="sort-icon-bnpl-status" class="text-indigo-500 font-bold"></span></div>
+                                            </th>
                                             <th class="py-3 px-4 text-right">Actions</th>
                                         </tr>
                                     </thead>
