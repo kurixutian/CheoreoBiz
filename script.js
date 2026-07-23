@@ -31,21 +31,23 @@ let draftBundleItems = [];
 let editingBundleId = null;
 
 // Internal Supplier Batch State
-let currentBatchItems = [];
 let currentApFilter = 'all';
 let confirmProceedCallback = null;
 
 // Persistent Transaction Edit Session State
 let editingOrderId = null;
 
-// POS Table Header Click Sorting Session Coordinates
-let orderSortColumn = null;
-let orderSortDirection = 'none';
+// Multi-Column Table Sort Stack Systems
+// Each item in stack: { col: string, dir: 'asc'|'desc' }
+let orderSortStack = [];
+let bundleSortStack = [];
+let bnplSortStack = [];
+let inventorySortStack = [];
 
 const itemNameInput = document.getElementById('item-name');
 const customDropdown = document.getElementById('custom-dropdown');
 
-// Global layout action listeners
+// Global Layout Action Listeners
 document.addEventListener('click', (e) => {
     const itemInput = document.getElementById('item-name');
     const itemDropdown = document.getElementById('custom-dropdown');
@@ -79,7 +81,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ESC Key listener to close active popups
+// ESC Key Listener to Close Active Popups
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeCartModal();
@@ -114,7 +116,7 @@ function closeModalOnBackdrop(e, modalId) {
     }
 }
 
-// Show Custom Confirmation popup UI
+// Show Custom Confirmation Popup UI
 function requestUserConfirmation(title, message, proceedText, callback) {
     document.getElementById('confirm-modal-title').innerText = title;
     document.getElementById('confirm-modal-message').innerText = message;
@@ -131,7 +133,7 @@ function requestUserConfirmation(title, message, proceedText, callback) {
     openModal('confirmation-popup-modal');
 }
 
-// Set default date inputs
+// Set Default Date Inputs
 function initDateDefaults() {
     const pDateInput = document.getElementById('bnpl-purchasedate');
     const dDateInput = document.getElementById('bnpl-duedate');
@@ -145,6 +147,7 @@ function initIcons() { if (window.lucide) lucide.createIcons(); }
 
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
+    if (!container) return;
     const toast = document.createElement('div');
     
     const bgClass = type === 'success' ? 'bg-emerald-500' : (type === 'error' ? 'bg-rose-500' : (type === 'info' ? 'bg-indigo-500' : 'bg-slate-800'));
@@ -163,7 +166,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Global modal animation handler methods
+// Global Modal Animation Handler Methods
 function openModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
@@ -208,7 +211,7 @@ function getOrderItems(order) {
     }];
 }
 
-// ================= FLOATING HEADER CALCULATOR ENGINE =================
+// ================= FLOATING CALCULATOR ENGINE =================
 function toggleCalculator(show) {
     const popup = document.getElementById('calculator-popup');
     const wrapper = document.getElementById('calculator-wrapper');
@@ -243,7 +246,7 @@ function pressCalc(val) {
     }
 }
 
-// ================= CART MODAL ENGINE (POPUP PARITY WITH CALCULATOR) =================
+// ================= CART MODAL ENGINE =================
 function openCartModal() {
     if (window.innerWidth >= 1280) return; // Desktop uses static column
     const modal = document.getElementById('cartModal');
@@ -318,8 +321,17 @@ function saveBnpl() { db.ref('bnplRecords').set(bnplRecords); }
 
 // ================= FIREBASE REALTIME SYNC =================
 function startRealtimeSync() {
-    db.ref('inventory').on('value', snapshot => { const data = snapshot.val(); inventory = data ? Object.values(data) : []; renderUI(); });
-    db.ref('orders').on('value', snapshot => { const data = snapshot.val(); orders = data ? Object.values(data) : []; orders.forEach(o => { if(!o.status) o.status = 'active'; }); renderUI(); });
+    db.ref('inventory').on('value', snapshot => { 
+        const data = snapshot.val(); 
+        inventory = data ? Object.values(data) : []; 
+        renderUI(); 
+    });
+    db.ref('orders').on('value', snapshot => { 
+        const data = snapshot.val(); 
+        orders = data ? Object.values(data) : []; 
+        orders.forEach(o => { if(!o.status) o.status = 'active'; }); 
+        renderUI(); 
+    });
     
     db.ref('bundles').on('value', snapshot => { 
         const data = snapshot.val(); 
@@ -334,11 +346,18 @@ function startRealtimeSync() {
         renderBnplUI();
     });
 
-    db.ref('activityLog').on('value', snapshot => { const data = snapshot.val(); activityLog = data ? Object.values(data) : []; renderActivityLog(); });
+    db.ref('activityLog').on('value', snapshot => { 
+        const data = snapshot.val(); 
+        activityLog = data ? Object.values(data) : []; 
+        renderActivityLog(); 
+    });
+
     db.ref('stockHistory').on('value', snapshot => { 
         const data = snapshot.val(); 
         stockHistory = data ? Object.values(data) : []; 
-        if(document.getElementById('stock-history-modal') && !document.getElementById('stock-history-modal').classList.contains('hidden')) { renderStockHistory(); } 
+        if(document.getElementById('stock-history-modal') && !document.getElementById('stock-history-modal').classList.contains('hidden')) { 
+            renderStockHistory(); 
+        } 
         renderSummary(); 
         renderBatchMatrixTable();
     });
@@ -359,7 +378,9 @@ function renderUI() {
 
 // ================= THEME & NAVIGATION =================
 function initTheme() {
-    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    }
     updateThemeIcons();
 }
 
@@ -374,8 +395,13 @@ function confirmClearActivityLog() {
 
 function toggleTheme() {
     const html = document.documentElement;
-    if (html.classList.contains('dark')) { html.classList.remove('dark'); localStorage.setItem('theme', 'light'); } 
-    else { html.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
+    if (html.classList.contains('dark')) { 
+        html.classList.remove('dark'); 
+        localStorage.setItem('theme', 'light'); 
+    } else { 
+        html.classList.add('dark'); 
+        localStorage.setItem('theme', 'dark'); 
+    }
     updateThemeIcons();
 }
 
@@ -383,29 +409,48 @@ function updateThemeIcons() {
     const isDark = document.documentElement.classList.contains('dark');
     const iconName = isDark ? 'sun' : 'moon';
     const deskIcon = document.getElementById('theme-icon');
-    if (deskIcon) { deskIcon.setAttribute('data-lucide', iconName); lucide.createIcons({attrs:{class:['w-4','h-4']}}); }
+    if (deskIcon) { 
+        deskIcon.setAttribute('data-lucide', iconName); 
+        lucide.createIcons({attrs:{class:['w-4','h-4']}}); 
+    }
 }
 
 function switchTab(tabId) {
     document.querySelectorAll('[data-tab-content]').forEach(sec => {
-        if(sec.dataset.tabContent === tabId) { sec.classList.remove('hidden'); sec.classList.add('block', 'animate-fade-in'); } 
-        else { sec.classList.add('hidden'); sec.classList.remove('block', 'animate-fade-in'); }
+        if(sec.dataset.tabContent === tabId) { 
+            sec.classList.remove('hidden'); 
+            sec.classList.add('block', 'animate-fade-in'); 
+        } else { 
+            sec.classList.add('hidden'); 
+            sec.classList.remove('block', 'animate-fade-in'); 
+        }
     });
     document.querySelectorAll('[data-tab-btn]').forEach(btn => {
-        if (btn.dataset.tabBtn === tabId) { btn.classList.add('tab-active'); btn.classList.remove('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); } 
-        else { btn.classList.remove('tab-active'); btn.classList.add('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); }
+        if (btn.dataset.tabBtn === tabId) { 
+            btn.classList.add('tab-active'); 
+            btn.classList.remove('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); 
+        } else { 
+            btn.classList.remove('tab-active'); 
+            btn.classList.add('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); 
+        }
     });
-    if (tabId === 'orders') { renderPOSCatalog(); }
+    if (tabId === 'orders') { renderPOSCatalog(); renderOrdersTable(); }
     if (tabId === 'bundles') renderBundlesTable(); 
     if (tabId === 'bnpl') renderBnplUI();
+    if (tabId === 'inventory') renderInventoryTable();
 }
 
 // ================= DASHBOARD LOGIC =================
 function setDashboardTimeframe(tf) {
     dashboardTimeframe = tf;
     document.querySelectorAll('[data-timeframe]').forEach(btn => {
-        if(btn.dataset.timeframe === tf) { btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); btn.classList.remove('text-slate-500'); } 
-        else { btn.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); btn.classList.add('text-slate-500'); }
+        if(btn.dataset.timeframe === tf) { 
+            btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); 
+            btn.classList.remove('text-slate-500'); 
+        } else { 
+            btn.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); 
+            btn.classList.add('text-slate-500'); 
+        }
     });
     renderSummary();
 }
@@ -418,7 +463,7 @@ function isWithinTimeframe(dateStr, tf) {
     const now = new Date();
     if (tf === 'today') return date.toDateString() === now.toDateString();
     if (tf === 'week') {
-        const firstDay = new Date(now.setDate(now.getDate() - now.getDate() + now.getDay()));
+        const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
         now.setHours(23,59,59,999);
         const lastDay = new Date(now.setDate(now.getDate() - now.getDay() + 6));
         return date >= firstDay && date <= lastDay;
@@ -430,6 +475,7 @@ function isWithinTimeframe(dateStr, tf) {
 function openFinancialModal(type) {
     const list = document.getElementById('details-modal-list');
     const head = document.getElementById('details-modal-head');
+    if (!list || !head) return;
     list.innerHTML = '';
     let title = ''; let icon = '';
 
@@ -580,7 +626,9 @@ function openDashboardModal(filterType) {
         title = "Out of Stock Items"; icon = "x-circle";
     }
     
-    const list = document.getElementById('dash-modal-list'); list.innerHTML = '';
+    const list = document.getElementById('dash-modal-list'); 
+    if(!list) return;
+    list.innerHTML = '';
     if (filtered.length === 0) {
         list.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No products to show.</td></tr>`;
     } else {
@@ -630,8 +678,57 @@ function renderActivityLog() {
     initIcons();
 }
 
+// ================= UNIVERSAL MULTI-COLUMN SORT HELPER =================
+function handleMultiColumnSortToggle(stack, col, isShift) {
+    const existingIndex = stack.findIndex(item => item.col === col);
+    if (isShift) {
+        if (existingIndex < 0) {
+            stack.push({ col, dir: 'asc' });
+        } else if (stack[existingIndex].dir === 'asc') {
+            stack[existingIndex].dir = 'desc';
+        } else {
+            stack.splice(existingIndex, 1);
+        }
+    } else {
+        if (existingIndex === 0 && stack.length === 1) {
+            if (stack[0].dir === 'asc') {
+                stack[0].dir = 'desc';
+            } else {
+                stack.length = 0;
+            }
+        } else {
+            stack.length = 0;
+            stack.push({ col, dir: 'asc' });
+        }
+    }
+}
+
+function updateSortHeaderIcons(prefix, stack, columns) {
+    columns.forEach(col => {
+        const el = document.getElementById(`${prefix}-${col}`);
+        if (!el) return;
+        const stackIndex = stack.findIndex(item => item.col === col);
+        if (stackIndex >= 0) {
+            const item = stack[stackIndex];
+            const arrow = item.dir === 'asc' ? '↑' : '↓';
+            const badge = stack.length > 1 ? `<span class="sort-priority-badge">${stackIndex + 1}</span>` : '';
+            el.innerHTML = ` ${arrow}${badge}`;
+        } else {
+            el.innerText = '';
+        }
+    });
+}
+
 // ================= INVENTORY LOGIC =================
+function toggleInventorySort(column, event) {
+    const isShift = event && event.shiftKey;
+    handleMultiColumnSortToggle(inventorySortStack, column, isShift);
+    updateSortHeaderIcons('sort-icon-inv', inventorySortStack, ['name', 'stock', 'cpp', 'price', 'profit', 'margin', 'value']);
+    renderInventoryTable();
+}
+
 function showDropdown() {
+    if (!itemNameInput || !customDropdown) return;
     const filter = itemNameInput.value.trim().toLowerCase();
     customDropdown.innerHTML = '';
     if (!filter) { customDropdown.classList.add('hidden'); return; }
@@ -667,7 +764,7 @@ function handleStockSubmit(e) {
     const recMin = parseFloat(document.getElementById('stock-rec-cpp-min')?.value) || 0;
     const recMax = parseFloat(document.getElementById('stock-rec-cpp-max')?.value) || 0;
 
-    if (fileInput.files && fileInput.files[0]) {
+    if (fileInput && fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
         reader.onload = function(event) {
             const img = new Image();
@@ -795,7 +892,7 @@ function saveStockEdit(e) {
             closeModal('stock-modal');
         };
 
-        if (fileInput.files && fileInput.files[0]) {
+        if (fileInput && fileInput.files && fileInput.files[0]) {
             const reader = new FileReader();
             reader.onload = function(event) {
                 const img = new Image();
@@ -813,16 +910,47 @@ function saveStockEdit(e) {
     }
 }
 
+function getSortedInventory() {
+    let sorted = [...inventory];
+    if (inventorySortStack.length > 0) {
+        sorted.sort((a, b) => {
+            for (let sortObj of inventorySortStack) {
+                const { col, dir } = sortObj;
+                const dirMod = dir === 'asc' ? 1 : -1;
+                let diff = 0;
+                
+                if (col === 'name') diff = a.name.localeCompare(b.name);
+                else if (col === 'stock') diff = (a.stockQty || 0) - (b.stockQty || 0);
+                else if (col === 'cpp') diff = (a.unitCost || 0) - (b.unitCost || 0);
+                else if (col === 'price') diff = (a.sellPrice || 0) - (b.sellPrice || 0);
+                else if (col === 'profit') diff = ((a.sellPrice || 0) - (a.unitCost || 0)) - ((b.sellPrice || 0) - (b.unitCost || 0));
+                else if (col === 'margin') {
+                    const mA = a.sellPrice > 0 ? ((a.sellPrice - (a.unitCost || 0)) / a.sellPrice) : 0;
+                    const mB = b.sellPrice > 0 ? ((b.sellPrice - (b.unitCost || 0)) / b.sellPrice) : 0;
+                    diff = mA - mB;
+                }
+                else if (col === 'value') diff = ((a.stockQty || 0) * (a.unitCost || 0)) - ((b.stockQty || 0) * (b.unitCost || 0));
+
+                if (diff !== 0) return diff * dirMod;
+            }
+            return 0;
+        });
+    }
+    return sorted;
+}
+
 function renderInventoryTable() {
     const list = document.getElementById('inventory-list'); 
     if(!list) return; list.innerHTML = '';
     
-    if(inventory.length === 0) { 
+    const displayList = getSortedInventory();
+    
+    if(displayList.length === 0) { 
         list.innerHTML = `<tr><td colspan="8" class="py-12 text-center text-slate-400"><i data-lucide="package-open" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">Stock room is empty</p></td></tr>`; 
         initIcons(); return; 
     }
     
-    inventory.forEach(item => {
+    displayList.forEach(item => {
         let detailBlock = '';
         if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" class="w-10 h-10 object-cover rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
         else detailBlock = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-sm flex-shrink-0 border border-indigo-100 dark:border-indigo-800/50">${item.name.substring(0,2).toUpperCase()}</div><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
@@ -864,6 +992,13 @@ function renderInventoryTable() {
 }
 
 // ================= BUNDLES & PROMOS LOGIC =================
+function toggleBundleSort(column, event) {
+    const isShift = event && event.shiftKey;
+    handleMultiColumnSortToggle(bundleSortStack, column, isShift);
+    updateSortHeaderIcons('sort-icon-bundle', bundleSortStack, ['name', 'includes', 'price', 'status']);
+    renderBundlesTable();
+}
+
 function populateBundleItemSelect() {
     const select = document.getElementById('bundle-item-select');
     if(!select) return; select.innerHTML = '<option value="">Select product...</option>';
@@ -892,7 +1027,9 @@ function addDraftBundleItem() {
 function removeDraftBundleItem(index) { draftBundleItems.splice(index, 1); renderDraftBundleItems(); }
 
 function renderDraftBundleItems() {
-    const list = document.getElementById('draft-bundle-list'); list.innerHTML = '';
+    const list = document.getElementById('draft-bundle-list'); 
+    if (!list) return;
+    list.innerHTML = '';
     draftBundleItems.forEach((d, i) => {
         list.innerHTML += `<div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-600"><span>${d.qty}x ${d.name}</span><button type="button" onclick="removeDraftBundleItem(${i})" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-md btn-transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>`;
     }); initIcons();
@@ -907,8 +1044,10 @@ function handleBundleSubmit(e) {
     if(draftBundleItems.length === 0) { showToast("Add items to the promo bundle.", "error"); return; }
     if(editingBundleId) {
         const index = bundles.findIndex(b => b.id === editingBundleId);
-        bundles[index] = { ...bundles[index], type, name, price, items: draftBundleItems };
-        showToast("Promo updated", "success"); cancelBundleEdit();
+        if (index > -1) {
+            bundles[index] = { ...bundles[index], type, name, price, items: draftBundleItems };
+            showToast("Promo updated", "success"); cancelBundleEdit();
+        }
     } else {
         bundles.push({ id: 'bndl-' + Date.now().toString(), type, name, price, isActive: true, items: draftBundleItems });
         showToast("New promo created", "success"); document.getElementById('bundle-form').reset(); draftBundleItems = []; renderDraftBundleItems();
@@ -935,14 +1074,63 @@ function cancelBundleEdit() {
     document.getElementById('bundle-cancel-btn').classList.add('hidden'); initIcons();
 }
 
-function toggleBundleStatus(id) { const bundle = bundles.find(b => b.id === id); if(bundle) { bundle.isActive = !bundle.isActive; saveBundles(); showToast(bundle.isActive ? "Promo enabled" : "Promo disabled", "info"); } }
-function deleteBundle(id) { if(confirm("Permanently delete this promo bundle?")) { bundles = bundles.filter(b => b.id !== id); saveBundles(); showToast("Promo deleted", "success"); } }
+function toggleBundleStatus(id) { 
+    const bundle = bundles.find(b => b.id === id); 
+    if(bundle) { 
+        bundle.isActive = !bundle.isActive; 
+        saveBundles(); 
+        showToast(bundle.isActive ? "Promo enabled" : "Promo disabled", "info"); 
+    } 
+}
+
+function deleteBundle(id) { 
+    requestUserConfirmation("Delete Promo", "Permanently delete this promo bundle?", "Delete", () => {
+        bundles = bundles.filter(b => b.id !== id); 
+        saveBundles(); 
+        showToast("Promo deleted", "success"); 
+    });
+}
+
+function getSortedBundles() {
+    let sorted = [...bundles];
+    sorted.sort((a, b) => {
+        // DEFAULT BEHAVIOR: Active promos always appear first
+        if (a.isActive !== b.isActive) {
+            return a.isActive ? -1 : 1;
+        }
+
+        // Apply multi-column sorting within sections
+        if (bundleSortStack.length > 0) {
+            for (let sortObj of bundleSortStack) {
+                const { col, dir } = sortObj;
+                const dirMod = dir === 'asc' ? 1 : -1;
+                let diff = 0;
+
+                if (col === 'name') diff = a.name.localeCompare(b.name);
+                else if (col === 'includes') {
+                    const strA = a.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                    const strB = b.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                    diff = strA.localeCompare(strB);
+                }
+                else if (col === 'price') diff = (a.price || 0) - (b.price || 0);
+                else if (col === 'status') diff = (a.isActive ? 1 : 0) - (b.isActive ? 1 : 0);
+
+                if (diff !== 0) return diff * dirMod;
+            }
+        }
+        return 0;
+    });
+    return sorted;
+}
 
 function renderBundlesTable() {
     const list = document.getElementById('bundles-list'); if(!list) return; list.innerHTML = '';
-    if(bundles.length === 0) { list.innerHTML = `<tr><td colspan="5" class="py-12 text-center"><div class="flex flex-col items-center justify-center text-slate-400"><i data-lucide="tags" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="sm:text-sm text-xs font-bold">No promos active.</p></div></td></tr>`; initIcons(); return; }
+    
+    const displayBundles = getSortedBundles();
 
-    bundles.forEach(bundle => {
+    if(displayBundles.length === 0) { list.innerHTML = `<tr><td colspan="5" class="py-12 text-center"><div class="flex flex-col items-center justify-center text-slate-400"><i data-lucide="tags" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="sm:text-sm text-xs font-bold">No promos active.</p></div></td></tr>`; initIcons(); return; }
+
+    displayBundles.forEach(bundle => {
         const itemsStr = bundle.items.map(i => `<span class="inline-block bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-md font-bold text-[10px] mr-1.5 mb-1.5 shadow-sm border border-slate-200 dark:border-slate-600">${i.qty}x ${i.name}</span>`).join('');
         list.innerHTML += `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${!bundle.isActive ? 'opacity-50 grayscale' : ''}">
@@ -969,7 +1157,7 @@ function calculateCart() {
     mixedBundles.forEach(bundle => {
         let possibleApps = Infinity;
         bundle.items.forEach(bi => { let cItem = cartSnapshot.find(c => c.id === bi.itemId); if (!cItem) possibleApps = 0; else possibleApps = Math.min(possibleApps, Math.floor(cItem.remainingQty / bi.qty)); });
-        if (possibleApps > 0) {
+        if (possibleApps > 0 && possibleApps !== Infinity) {
             let regCost = 0, itemsInvolved = [];
             bundle.items.forEach(bi => {
                 let cItem = cartSnapshot.find(c => c.id === bi.itemId); cItem.remainingQty -= (bi.qty * possibleApps);
@@ -1019,9 +1207,12 @@ function renderPOSCatalog() {
 function addToCart(itemId) {
     const item = inventory.find(i => i.id === itemId); if(!item || item.stockQty <= 0) return;
     const cartItem = cart.find(c => c.id === itemId);
-    if(cartItem) { if(cartItem.qty + 1 > item.stockQty) { showToast("Max stock reached", "info"); return; } cartItem.qty++; } 
-    else cart.push({ id: item.id, name: item.name, sellPrice: item.sellPrice || 0, unitCost: item.unitCost || 0, maxStock: item.stockQty, qty: 1 }); 
-    
+    if(cartItem) { 
+        if(cartItem.qty + 1 > item.stockQty) { showToast("Max stock reached", "info"); return; } 
+        cartItem.qty++; 
+    } else {
+        cart.push({ id: item.id, name: item.name, sellPrice: item.sellPrice || 0, unitCost: item.unitCost || 0, maxStock: item.stockQty, qty: 1 }); 
+    }
     renderCart();
 }
 
@@ -1029,8 +1220,10 @@ function updateCartQty(id, change) {
     const match = cart.find(c => c.id === id); if(!match) return; match.qty += change;
     if(match.qty <= 0) {
         cart = cart.filter(c => c.id !== id);
-    }
-    else if(match.qty > match.maxStock) { match.qty = match.maxStock; showToast("Max stock limit reached", "info"); } 
+    } else if(match.qty > match.maxStock) { 
+        match.qty = match.maxStock; 
+        showToast("Max stock limit reached", "info"); 
+    } 
     renderCart();
 }
 
@@ -1113,7 +1306,6 @@ function renderCart() {
         if(cartTitle) cartTitle.innerText = "Current Cart";
     }
 
-    // Refresh dynamic Floating Notification Badge
     updateCartBadge();
 
     if (cart.length === 0) {
@@ -1130,7 +1322,7 @@ function renderCart() {
     const cartCalc = calculateCart();
 
     cart.forEach(item => {
-        const calcItem = cartCalc.items.find(c => c.id === item.id);
+        const calcItem = cartCalc.items.find(c => c.id === item.id) || item;
         let priceDisplay = `<span class="text-[11px] font-semibold text-slate-500">₱ ${item.sellPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
         if (calcItem.discountedAmount > 0) priceDisplay += `<span class="ml-1.5 text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm border border-emerald-100 dark:border-emerald-800/30">- ₱ ${calcItem.discountedAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
 
@@ -1163,7 +1355,7 @@ function renderCart() {
     initIcons();
 }
 
-// ================= TRANSACTION POST LOGIC =================
+// ================= TRANSACTION POST & HISTORY LOGIC =================
 function setOrderTab(tab) {
     currentOrderTab = tab;
     document.querySelectorAll('[id^="tab-"]').forEach(btn => {
@@ -1177,34 +1369,32 @@ function setOrderTab(tab) {
     renderOrdersTable();
 }
 
-function changeRowsPerPage() { ordersPerPage = parseInt(document.getElementById('rows-per-page-select').value); currentOrdersPage = 1; renderOrdersTable(); }
-function prevOrdersPage() { if (currentOrdersPage > 1) { currentOrdersPage--; renderOrdersTable(); } }
-function nextOrdersPage() { let filtered = getFilteredOrders(); if (currentOrdersPage < Math.ceil(filtered.length / ordersPerPage)) { currentOrdersPage++; renderOrdersTable(); } }
-
-function toggleOrderSort(column) {
-    if (orderSortColumn === column) {
-        if (orderSortDirection === 'none') orderSortDirection = 'asc';
-        else if (orderSortDirection === 'asc') orderSortDirection = 'desc';
-        else orderSortDirection = 'none';
-    } else {
-        orderSortColumn = column;
-        orderSortDirection = 'asc';
-    }
-    updateSortIndicators();
-    renderOrdersTable();
+function changeRowsPerPage() { 
+    ordersPerPage = parseInt(document.getElementById('rows-per-page-select').value); 
+    currentOrdersPage = 1; 
+    renderOrdersTable(); 
 }
 
-function updateSortIndicators() {
-    const columns = ['customer', 'date', 'total', 'payment', 'delivery'];
-    columns.forEach(col => {
-        const el = document.getElementById(`sort-icon-${col}`);
-        if (!el) return;
-        if (orderSortColumn === col && orderSortDirection !== 'none') {
-            el.innerText = orderSortDirection === 'asc' ? ' ↑' : ' ↓';
-        } else {
-            el.innerText = '';
-        }
-    });
+function prevOrdersPage() { 
+    if (currentOrdersPage > 1) { 
+        currentOrdersPage--; 
+        renderOrdersTable(); 
+    } 
+}
+
+function nextOrdersPage() { 
+    let filtered = getFilteredOrders(); 
+    if (currentOrdersPage < Math.ceil(filtered.length / ordersPerPage)) { 
+        currentOrdersPage++; 
+        renderOrdersTable(); 
+    } 
+}
+
+function toggleOrderSort(column, event) {
+    const isShift = event && event.shiftKey;
+    handleMultiColumnSortToggle(orderSortStack, column, isShift);
+    updateSortHeaderIcons('sort-icon', orderSortStack, ['customer', 'date', 'total', 'payment', 'delivery']);
+    renderOrdersTable();
 }
 
 function getFilteredOrders() {
@@ -1234,33 +1424,46 @@ function getFilteredOrders() {
         });
     }
 
-    if (orderSortColumn && orderSortDirection !== 'none') {
-        const dirModifier = orderSortDirection === 'asc' ? 1 : -1;
-        filtered.sort((a, b) => {
-            if (orderSortColumn === 'customer') {
-                return a.customerName.localeCompare(b.customerName) * dirModifier;
-            }
-            if (orderSortColumn === 'date') {
-                return (new Date(a.date || 0) - new Date(b.date || 0)) * dirModifier;
-            }
-            if (orderSortColumn === 'total') {
-                return (a.totalRevenue - b.totalRevenue) * dirModifier;
-            }
-            if (orderSortColumn === 'payment') {
-                const aPaid = a.isPaid ? 1 : 0;
-                const bPaid = b.isPaid ? 1 : 0;
-                return (aPaid - bPaid) * dirModifier;
-            }
-            if (orderSortColumn === 'delivery') {
-                const aReceived = a.isReceived ? 1 : 0;
-                const bReceived = b.isReceived ? 1 : 0;
-                return (aReceived - bReceived) * dirModifier;
+    filtered.sort((a, b) => {
+        // If user defined explicit multi-column sorting stack
+        if (orderSortStack.length > 0) {
+            for (let sortObj of orderSortStack) {
+                const { col, dir } = sortObj;
+                const dirMod = dir === 'asc' ? 1 : -1;
+                let diff = 0;
+
+                if (col === 'customer') diff = a.customerName.localeCompare(b.customerName);
+                else if (col === 'date') diff = new Date(a.date || 0) - new Date(b.date || 0);
+                else if (col === 'total') diff = (a.totalRevenue || 0) - (b.totalRevenue || 0);
+                else if (col === 'payment') diff = (a.isPaid ? 1 : 0) - (b.isPaid ? 1 : 0);
+                else if (col === 'delivery') diff = (a.isReceived ? 1 : 0) - (b.isReceived ? 1 : 0);
+
+                if (diff !== 0) return diff * dirMod;
             }
             return 0;
-        });
-    } else {
-        filtered.sort((a, b) => b.id.localeCompare(a.id));
-    }
+        }
+
+        // DEFAULT ORDERING:
+        // 1. Unpaid orders first
+        // 2. Most recent transaction first within section
+        // 3. Then all paid transactions
+        // 4. Most recent first within each section
+        const aUnpaid = (!a.isPaid && a.status !== 'cancelled') ? 0 : 1;
+        const bUnpaid = (!b.isPaid && b.status !== 'cancelled') ? 0 : 1;
+
+        if (aUnpaid !== bUnpaid) {
+            return aUnpaid - bUnpaid;
+        }
+
+        // Within same payment status group, sort by most recent transaction first
+        const dateA = new Date(a.date || 0).getTime();
+        const dateB = new Date(b.date || 0).getTime();
+        if (dateA !== dateB) {
+            return dateB - dateA;
+        }
+
+        return b.id.localeCompare(a.id);
+    });
     
     return filtered;
 }
@@ -1268,9 +1471,16 @@ function getFilteredOrders() {
 function toggleOrderPaid(orderId) { 
     const order = orders.find(o => o.id === orderId); 
     if (order && order.status !== 'cancelled') { 
-        if (order.isPaid) { order.amountPaid = 0; order.isPaid = false; } 
-        else { order.amountPaid = order.totalRevenue; order.isPaid = true; } 
+        if (order.isPaid) { 
+            order.amountPaid = 0; 
+            order.isPaid = false; 
+        } else { 
+            order.amountPaid = order.totalRevenue; 
+            order.isPaid = true; 
+        } 
         saveOrders(); 
+        renderOrdersTable();
+        renderSummary();
         showToast("Payment status updated", "success"); 
     } 
 }
@@ -1280,45 +1490,35 @@ function toggleOrderReceived(orderId) {
     if (order && order.status !== 'cancelled') { 
         order.isReceived = !order.isReceived; 
         saveOrders(); 
+        renderOrdersTable();
+        renderSummary();
         showToast("Delivery status updated", "success"); 
     } 
 }
 
+/**
+ * POS Order Editing Bug Fix
+ * Opening an order for editing populates fields without modifying stock quantities.
+ */
 function editOrder(id) {
     const order = orders.find(o => o.id === id); 
     if (!order || order.status === 'cancelled') return;
     
-    if (order.isPaid) {
-        showToast("This order is completed and locked. Direct editing is prohibited.", "error");
-        return;
-    }
-
     if (editingOrderId) {
-        if(!confirm("An editing session is already active. Discard those changes and open this ticket?")) return;
-        const priorOrder = orders.find(o => o.id === editingOrderId);
-        if(priorOrder) {
-            getOrderItems(priorOrder).forEach(item => {
-                const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
-                if(invItem) invItem.stockQty -= item.qty;
-            });
-        }
+        if (!confirm("An editing session is already active. Discard those changes and open this ticket?")) return;
     }
 
     editingOrderId = order.id;
 
-    getOrderItems(order).forEach(item => {
-        const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
-        if (invItem) invItem.stockQty += item.qty;
-    });
-
+    // Load existing order items into active cart for display/editing
     cart = getOrderItems(order).map(item => {
         const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
         return {
-            id: invItem ? invItem.id : "legacy-id",
+            id: invItem ? invItem.id : item.id,
             name: item.name,
             sellPrice: item.sellPrice,
             unitCost: item.unitCost,
-            maxStock: invItem ? invItem.stockQty : item.qty,
+            maxStock: invItem ? (invItem.stockQty + item.qty) : item.qty,
             qty: item.qty
         };
     });
@@ -1327,40 +1527,54 @@ function editOrder(id) {
     
     const pAmtInput = document.getElementById('pos-paid-amount');
     const pFullCheck = document.getElementById('pos-paid-full');
-    if (pFullCheck) pFullCheck.checked = false;
+    if (pFullCheck) pFullCheck.checked = order.isPaid;
     if (pAmtInput) {
-        pAmtInput.disabled = false;
-        pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
-        pAmtInput.value = order.amountPaid || '';
+        pAmtInput.disabled = order.isPaid;
+        if (order.isPaid) pAmtInput.classList.add('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+        else pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+        pAmtInput.value = (order.amountPaid !== undefined) ? order.amountPaid : '';
     }
 
-    saveInventory();
     renderCart();
     switchTab('orders');
     openCartModal();
-    showToast(`Loaded invoice ${order.id} into active basket`, "info");
+    showToast(`Loaded order ${order.id} for editing`, "info");
 }
 
 function cancelOrder(id) {
     const order = orders.find(o => o.id === id);
-    if (order && order.status !== 'cancelled' && confirm(`Cancel transaction ticket for ${order.customerName}?\nThis rolls back all item quantities back to active warehouse inventory.`)) {
-        getOrderItems(order).forEach(item => {
-            const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase()); 
-            if (invItem) invItem.stockQty += item.qty;
-        });
-        order.status = 'cancelled'; order.isPaid = false; order.isReceived = false; order.amountPaid = 0;
-        saveOrders();
-        saveInventory();
-        showToast("Order transaction voided", "info");
+    if (order && order.status !== 'cancelled') {
+        requestUserConfirmation(
+            "Void Transaction Order",
+            `Cancel transaction ticket for ${order.customerName}?\nThis rolls back all item quantities back to active warehouse inventory.`,
+            "Proceed",
+            () => {
+                getOrderItems(order).forEach(item => {
+                    const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase()); 
+                    if (invItem) invItem.stockQty += item.qty;
+                });
+                order.status = 'cancelled'; order.isPaid = false; order.isReceived = false; order.amountPaid = 0;
+                saveOrders();
+                saveInventory();
+                renderUI();
+                showToast("Order transaction voided", "info");
+            }
+        );
     }
 }
 
 function deleteOrderPermanently(id) {
-    if(confirm("Permanently purge this order from the registry database? This cannot be undone.")) {
-        orders = orders.filter(o => o.id !== id);
-        saveOrders();
-        showToast("Order record purged", "success");
-    }
+    requestUserConfirmation(
+        "Delete Order",
+        "Permanently purge this order from the registry database? This cannot be undone.",
+        "Delete",
+        () => {
+            orders = orders.filter(o => o.id !== id);
+            saveOrders();
+            renderUI();
+            showToast("Order record purged", "success");
+        }
+    );
 }
 
 function renderOrdersTable() {
@@ -1389,10 +1603,8 @@ function renderOrdersTable() {
 
         let actionHtml = `<button onclick="event.stopPropagation(); generateReceipt('${order.id}')" title="Receipt" class="p-2 sm:p-2.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
         
-        if(!isCancelled && !order.isPaid) {
-            actionHtml += `<button onclick="event.stopPropagation(); editOrder('${order.id}')" title="Edit Basket Contents" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); cancelOrder('${order.id}')" title="Cancel Order" class="p-2 sm:p-2.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
-        } else if (order.isPaid && !isCancelled) {
-            actionHtml += `<span title="Locked Receipt (Paid)" class="p-2 sm:p-2.5 text-slate-300 dark:text-slate-600 cursor-not-allowed"><i data-lucide="lock" class="w-4 h-4"></i></span>`;
+        if(!isCancelled) {
+            actionHtml += `<button onclick="event.stopPropagation(); editOrder('${order.id}')" title="Edit Order" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); cancelOrder('${order.id}')" title="Cancel Order" class="p-2 sm:p-2.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
         }
 
         if (isCancelled) {
@@ -1441,14 +1653,6 @@ function clearCart() {
     }
     requestUserConfirmation("Clear Cart", "This will remove all items from your current cart. Are you sure?", "Clear", () => {
         if (editingOrderId) {
-            const order = orders.find(o => o.id === editingOrderId);
-            if (order) {
-                getOrderItems(order).forEach(item => {
-                    const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
-                    if (invItem) invItem.stockQty += item.qty;
-                });
-                saveInventory();
-            }
             editingOrderId = null;
             const modeBadge = document.getElementById('cart-mode-badge');
             const actionBtn = document.getElementById('cart-action-btn');
@@ -1473,6 +1677,11 @@ function clearCart() {
     });
 }
 
+/**
+ * POS Order Editing Bug Fix (Idempotent Checkout)
+ * When editing an existing order, update existing transaction in place.
+ * Editing an order must NOT modify inventory stock quantities.
+ */
 function checkoutCart() {
     if (cart.length === 0) { showToast("Cart is empty", "error"); return; }
     const customerName = document.getElementById('pos-customer').value.trim() || "Walk-in Customer";
@@ -1481,13 +1690,6 @@ function checkoutCart() {
     const totalDue = cartCalc.total;
 
     if (paidAmount > totalDue) { showToast("Payment exceeds total due", "error"); return; }
-
-    cart.forEach(item => {
-        const invItem = inventory.find(i => i.id === item.id);
-        if (invItem) {
-            invItem.stockQty -= item.qty;
-        }
-    });
 
     const orderItems = cart.map(item => ({
         id: item.id,
@@ -1504,29 +1706,66 @@ function checkoutCart() {
     const totalCost = orderItems.reduce((sum, i) => sum + i.totalCost, 0);
     const totalProfit = totalRevenue - totalCost;
 
-    const order = {
-        id: 'ORD-' + Date.now().toString().slice(-6),
-        customerName: customerName,
-        date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        items: orderItems,
-        totalRevenue: totalRevenue,
-        totalCost: totalCost,
-        totalProfit: totalProfit,
-        amountPaid: paidAmount,
-        isPaid: paidAmount >= totalDue,
-        isReceived: false,
-        status: 'active',
-        isEdited: false
-    };
+    if (editingOrderId) {
+        // UPDATE EXISTING ORDER IN-PLACE
+        const existingOrderIndex = orders.findIndex(o => o.id === editingOrderId);
+        if (existingOrderIndex > -1) {
+            orders[existingOrderIndex].customerName = customerName;
+            orders[existingOrderIndex].amountPaid = paidAmount;
+            orders[existingOrderIndex].isPaid = paidAmount >= totalDue;
+            orders[existingOrderIndex].items = orderItems;
+            orders[existingOrderIndex].totalRevenue = totalRevenue;
+            orders[existingOrderIndex].totalCost = totalCost;
+            orders[existingOrderIndex].totalProfit = totalProfit;
+            orders[existingOrderIndex].isEdited = true;
+            
+            saveOrders();
+            logActivity('sale', `Updated order ${editingOrderId} for ${customerName}`);
+            showToast(`Order ${editingOrderId} updated successfully!`, "success");
+            generateReceipt(editingOrderId);
+            editingOrderId = null;
+        } else {
+            showToast("Error locating existing order to update", "error");
+            return;
+        }
+    } else {
+        // CREATE NEW ORDER - Stock decreases ONLY when creating a new order
+        cart.forEach(item => {
+            const invItem = inventory.find(i => i.id === item.id);
+            if (invItem) {
+                invItem.stockQty -= item.qty;
+            }
+        });
 
-    orders.push(order);
-    logActivity('sale', `Sale to ${customerName}: ${order.id} for ₱${totalRevenue.toFixed(2)}`);
+        const newOrder = {
+            id: 'ORD-' + Date.now().toString().slice(-6),
+            customerName: customerName,
+            date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            items: orderItems,
+            totalRevenue: totalRevenue,
+            totalCost: totalCost,
+            totalProfit: totalProfit,
+            amountPaid: paidAmount,
+            isPaid: paidAmount >= totalDue,
+            isReceived: false,
+            status: 'active',
+            isEdited: false
+        };
+
+        orders.push(newOrder);
+        logActivity('sale', `Sale to ${customerName}: ${newOrder.id} for ₱${totalRevenue.toFixed(2)}`);
+
+        saveOrders();
+        saveInventory();
+        showToast(`Order ${newOrder.id} completed successfully!`, "success");
+        generateReceipt(newOrder.id);
+    }
 
     cart = [];
-    if (editingOrderId) editingOrderId = null;
     document.getElementById('pos-customer').value = '';
     document.getElementById('pos-paid-amount').value = '';
     document.getElementById('pos-paid-full').checked = false;
+    
     const modeBadge = document.getElementById('cart-mode-badge');
     const actionBtn = document.getElementById('cart-action-btn');
     const cartTitle = document.getElementById('cart-title');
@@ -1534,19 +1773,16 @@ function checkoutCart() {
     if (actionBtn) actionBtn.innerText = "Clear";
     if (cartTitle) cartTitle.innerText = "Current Cart";
 
-    saveOrders();
-    saveInventory();
     saveActivityLog();
     renderCart();
     renderUI();
-    showToast(`Order ${order.id} completed successfully!`, "success");
     closeCartModal();
-    generateReceipt(order.id);
 }
 
 function togglePaidFullCheck(checkbox) {
     const total = parseFloat(document.getElementById('cart-total-display').innerText) || 0;
     const paidInput = document.getElementById('pos-paid-amount');
+    if (!paidInput) return;
     if (checkbox.checked) {
         paidInput.value = total.toFixed(2);
         paidInput.disabled = true;
@@ -1586,6 +1822,13 @@ function filterCustomers() {
 }
 
 // ================= SUPPLIER MODULE =================
+function toggleBnplSort(column, event) {
+    const isShift = event && event.shiftKey;
+    handleMultiColumnSortToggle(bnplSortStack, column, isShift);
+    updateSortHeaderIcons('sort-icon-bnpl', bnplSortStack, ['supplier', 'date', 'product', 'financials', 'status']);
+    renderBnplTable();
+}
+
 function filterSuppliers() {
     const input = document.getElementById('bnpl-supplier');
     const dropdown = document.getElementById('supplier-dropdown');
@@ -1657,9 +1900,14 @@ function searchBatchItem() {
 }
 
 function runBatchMetricsCalc() {
-    const name = document.getElementById('batch-item-search').value.trim();
-    const qty = parseFloat(document.getElementById('batch-item-qty').value) || 0;
-    const cost = parseFloat(document.getElementById('batch-item-cost').value) || 0;
+    const nameInput = document.getElementById('batch-item-search');
+    const qtyInput = document.getElementById('batch-item-qty');
+    const costInput = document.getElementById('batch-item-cost');
+    if (!nameInput || !qtyInput || !costInput) return;
+
+    const name = nameInput.value.trim();
+    const qty = parseFloat(qtyInput.value) || 0;
+    const cost = parseFloat(costInput.value) || 0;
     
     const previewBlock = document.getElementById('batch-item-preview');
     const cppEl = document.getElementById('preview-cpp');
@@ -1667,8 +1915,8 @@ function runBatchMetricsCalc() {
     const pppEl = document.getElementById('preview-ppp');
     const marginEl = document.getElementById('preview-margin');
 
-    if(!name || qty <= 0 || cost <= 0) {
-        previewBlock.classList.add('hidden');
+    if(!previewBlock || !name || qty <= 0 || cost <= 0) {
+        if(previewBlock) previewBlock.classList.add('hidden');
         return;
     }
 
@@ -1678,10 +1926,10 @@ function runBatchMetricsCalc() {
     const profitPerPc = sp - cpp;
     const margin = sp > 0 ? ((profitPerPc / sp) * 100) : 0;
 
-    cppEl.innerText = cpp.toFixed(2);
-    spEl.innerText = sp.toFixed(2);
-    pppEl.innerText = profitPerPc.toFixed(2);
-    marginEl.innerText = margin.toFixed(2);
+    if(cppEl) cppEl.innerText = cpp.toFixed(2);
+    if(spEl) spEl.innerText = sp.toFixed(2);
+    if(pppEl) pppEl.innerText = profitPerPc.toFixed(2);
+    if(marginEl) marginEl.innerText = margin.toFixed(2);
 
     previewBlock.classList.remove('hidden');
 }
@@ -1782,7 +2030,8 @@ function handleSupplierPurchaseSubmit(e) {
     saveBnpl();
 
     document.getElementById('bnpl-form').reset();
-    document.getElementById('batch-item-preview').classList.add('hidden');
+    const previewBlock = document.getElementById('batch-item-preview');
+    if (previewBlock) previewBlock.classList.add('hidden');
     initDateDefaults();
     
     renderBnplUI();
@@ -1923,6 +2172,7 @@ function viewPaymentHistory(id) {
     document.getElementById('history-total-purchase').innerText = `₱ ${bill.totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 
     const container = document.getElementById('payment-logs-container');
+    if (!container) return;
     container.innerHTML = '';
 
     const payments = bill.payments || [];
@@ -1965,14 +2215,53 @@ function setBnplHistoryFilter(f) {
     renderBnplTable();
 }
 
-function renderBnplTable() {
-    const list = document.getElementById('bnpl-list');
-    if(!list) return; list.innerHTML = '';
-
+function getSortedBnplRecords() {
     let filtered = [...bnplRecords];
     if(currentApFilter === 'unpaid') filtered = filtered.filter(b => b.status === 'unpaid');
     else if(currentApFilter === 'partial') filtered = filtered.filter(b => b.status === 'partially_paid');
     else if(currentApFilter === 'paid') filtered = filtered.filter(b => b.status === 'fully_paid');
+
+    filtered.sort((a, b) => {
+        // DEFAULT BEHAVIOR: Unpaid supplier purchases always appear first
+        const aUnpaid = a.status !== 'fully_paid' ? 0 : 1;
+        const bUnpaid = b.status !== 'fully_paid' ? 0 : 1;
+        if (aUnpaid !== bUnpaid) {
+            return aUnpaid - bUnpaid;
+        }
+
+        // Apply multi-column sorting within unpaid / paid sections
+        if (bnplSortStack.length > 0) {
+            for (let sortObj of bnplSortStack) {
+                const { col, dir } = sortObj;
+                const dirMod = dir === 'asc' ? 1 : -1;
+                let diff = 0;
+
+                if (col === 'supplier') diff = a.supplierName.localeCompare(b.supplierName);
+                else if (col === 'date') diff = new Date(a.purchaseDate || 0) - new Date(b.purchaseDate || 0);
+                else if (col === 'product') {
+                    const strA = a.items.map(i => i.itemName).join(', ');
+                    const strB = b.items.map(i => i.itemName).join(', ');
+                    diff = strA.localeCompare(strB);
+                }
+                else if (col === 'financials') diff = (a.totalAmount || 0) - (b.totalAmount || 0);
+                else if (col === 'status') diff = a.status.localeCompare(b.status);
+
+                if (diff !== 0) return diff * dirMod;
+            }
+        }
+
+        // Default secondary sort: newest first
+        return new Date(b.purchaseDate || 0) - new Date(a.purchaseDate || 0);
+    });
+
+    return filtered;
+}
+
+function renderBnplTable() {
+    const list = document.getElementById('bnpl-list');
+    if(!list) return; list.innerHTML = '';
+
+    const filtered = getSortedBnplRecords();
 
     if(filtered.length === 0) {
         list.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="truck" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>No supplier purchases recorded.</td></tr>`;
@@ -2128,11 +2417,21 @@ function generateReceipt(orderId) {
         }
     });
 
-    document.getElementById('receipt-text').innerText = `================================\n      CHEOREOBIZ INVOICE\n================================\nDate: ${order.date || "N/A"}\nTxn : ${order.id}\n${order.isEdited ? '(Invoice reflects edited items)\n' : ''}Billed To: ${order.customerName}\n\nLine Items:\n--------------------------------\n${itemsInvoiceMatrix}--------------------------------\nSubtotal:           ₱ ${(order.totalRevenue + totalDiscount).toFixed(2).padStart(10)}\nTotal Discount:    -₱ ${totalDiscount.toFixed(2).padStart(10)}\nGrand Total:        ₱ ${order.totalRevenue.toFixed(2).padStart(10)}\nAmount Paid:        ₱ ${paidVal.toFixed(2).padStart(10)}\nBalance Due:        ₱ ${(order.totalRevenue - paidVal).toFixed(2).padStart(10)}\n--------------------------------\nPayment:  ${statusLine}\nDelivery: ${order.isReceived ? 'Fulfilled' : 'Pending'}\n\nThank you for your business!\n================================`;
+    const receiptEl = document.getElementById('receipt-text');
+    if (receiptEl) {
+        receiptEl.innerText = `================================\n      CHEOREOBIZ INVOICE\n================================\nDate: ${order.date || "N/A"}\nTxn : ${order.id}\n${order.isEdited ? '(Invoice reflects edited items)\n' : ''}Billed To: ${order.customerName}\n\nLine Items:\n--------------------------------\n${itemsInvoiceMatrix}--------------------------------\nSubtotal:           ₱ ${(order.totalRevenue + totalDiscount).toFixed(2).padStart(10)}\nTotal Discount:    -₱ ${totalDiscount.toFixed(2).padStart(10)}\nGrand Total:        ₱ ${order.totalRevenue.toFixed(2).padStart(10)}\nAmount Paid:        ₱ ${paidVal.toFixed(2).padStart(10)}\nBalance Due:        ₱ ${(order.totalRevenue - paidVal).toFixed(2).padStart(10)}\n--------------------------------\nPayment:  ${statusLine}\nDelivery: ${order.isReceived ? 'Fulfilled' : 'Pending'}\n\nThank you for your business!\n================================`;
+    }
     openModal('receipt-modal');
 }
 
-function copyReceiptToClipboard() { navigator.clipboard.writeText(document.getElementById('receipt-text').innerText).then(() => { showToast("Receipt copied", "success"); closeModal('receipt-modal'); }); }
+function copyReceiptToClipboard() { 
+    const textEl = document.getElementById('receipt-text');
+    if (!textEl) return;
+    navigator.clipboard.writeText(textEl.innerText).then(() => { 
+        showToast("Receipt copied", "success"); 
+        closeModal('receipt-modal'); 
+    }); 
+}
 
 function exportToCSV() {
     if (orders.length === 0) { showToast("No records to export", "error"); return; }
