@@ -1,4 +1,4 @@
-// ================= FIREBASE INIT =================
+// ================= FIREBASE INITIALIZATION =================
 const firebaseConfig = {
     apiKey: "AIzaSyBHoIPA427QslTdey1oh-rvHcmRZhn3YCs",
     authDomain: "cheoreobiz-ledger.firebaseapp.com",
@@ -12,7 +12,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
-// ================= GLOBAL STATE =================
+// ================= GLOBAL SYSTEM STATE =================
 let inventory = [];
 let orders = [];
 let bundles = [];
@@ -24,13 +24,19 @@ let bnplRecords = [];
 let currentFilter = 'all';
 let currentOrderTab = 'all';
 let dashboardTimeframe = 'all';
+
+// POS Sales History Pagination State
 let ordersPerPage = 10;
 let currentOrdersPage = 1;
+
+// Supplier Purchases AP Ledger Pagination State
+let bnplRowsPerPage = 10;
+let bnplCurrentPage = 1;
 
 let draftBundleItems = [];
 let editingBundleId = null;
 
-// Internal Supplier Batch State
+// Internal Supplier Batch & Confirmation State
 let currentApFilter = 'all';
 let confirmProceedCallback = null;
 
@@ -38,7 +44,6 @@ let confirmProceedCallback = null;
 let editingOrderId = null;
 
 // Multi-Column Table Sort Stack Systems
-// Each item in stack: { col: string, dir: 'asc'|'desc' }
 let orderSortStack = [];
 let bundleSortStack = [];
 let bnplSortStack = [];
@@ -47,7 +52,7 @@ let inventorySortStack = [];
 const itemNameInput = document.getElementById('item-name');
 const customDropdown = document.getElementById('custom-dropdown');
 
-// Global Layout Action Listeners
+// ================= GLOBAL EVENT LISTENERS & BACKDROP HANDLERS =================
 document.addEventListener('click', (e) => {
     const itemInput = document.getElementById('item-name');
     const itemDropdown = document.getElementById('custom-dropdown');
@@ -76,12 +81,12 @@ document.addEventListener('click', (e) => {
     // Modal Click-outside Close Logic for Calculator
     const calcPopup = document.getElementById('calculator-popup');
     const calcWrapper = document.getElementById('calculator-wrapper');
-    if (calcPopup && !calcPopup.classList.contains('hidden') && calcWrapper && !calcWrapper.contains(e.target) && !e.target.closest('button[title="Quick Calculator"]')) {
+    if (calcPopup && !calcPopup.classList.contains('hidden') && calcWrapper && !calcWrapper.contains(e.target) && !e.target.closest('button[title="Calculator"]')) {
         toggleCalculator(false);
     }
 });
 
-// ESC Key Listener to Close Active Popups
+// Keydown Shortcuts & ESC Trigger Listeners
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeCartModal();
@@ -116,24 +121,28 @@ function closeModalOnBackdrop(e, modalId) {
     }
 }
 
-// Show Custom Confirmation Popup UI
+// Custom Confirmation Modal Engine
 function requestUserConfirmation(title, message, proceedText, callback) {
-    document.getElementById('confirm-modal-title').innerText = title;
-    document.getElementById('confirm-modal-message').innerText = message;
+    const titleEl = document.getElementById('confirm-modal-title');
+    const msgEl = document.getElementById('confirm-modal-message');
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerText = message;
     
     const proceedBtn = document.getElementById('confirm-proceed-btn');
-    proceedBtn.innerText = proceedText;
-    if (proceedText === 'Clear' || proceedText === 'Delete') {
-        proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-3 rounded-xl transition-colors btn-transition";
-    } else {
-        proceedBtn.className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-3 rounded-xl transition-colors btn-transition";
+    if (proceedBtn) {
+        proceedBtn.innerText = proceedText;
+        if (proceedText === 'Clear' || proceedText === 'Delete') {
+            proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-3 rounded-full transition-all btn-transition shadow-md shadow-rose-600/20";
+        } else {
+            proceedBtn.className = "flex-1 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-3 rounded-full transition-all btn-transition shadow-md shadow-brand-500/20";
+        }
     }
     
     confirmProceedCallback = callback;
     openModal('confirmation-popup-modal');
 }
 
-// Set Default Date Inputs
+// Initialize Default Input Dates
 function initDateDefaults() {
     const pDateInput = document.getElementById('bnpl-purchasedate');
     const dDateInput = document.getElementById('bnpl-duedate');
@@ -142,31 +151,33 @@ function initDateDefaults() {
     if (dDateInput) dDateInput.value = today;
 }
 
-// ================= UTILITIES =================
-function initIcons() { if (window.lucide) lucide.createIcons(); }
+// ================= UTILITIES & NOTIFICATIONS =================
+function initIcons() { 
+    if (window.lucide) lucide.createIcons(); 
+}
 
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
     const toast = document.createElement('div');
     
-    const bgClass = type === 'success' ? 'bg-emerald-500' : (type === 'error' ? 'bg-rose-500' : (type === 'info' ? 'bg-indigo-500' : 'bg-slate-800'));
-    const icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'alert-circle' : 'info');
+    const bgClass = type === 'success' ? 'bg-emerald-600 text-white' : (type === 'error' ? 'bg-rose-600 text-white' : (type === 'info' ? 'bg-brand-600 text-white' : 'bg-slate-900 dark:bg-slate-800 text-white'));
+    const icon = type === 'success' ? 'check-circle-2' : (type === 'error' ? 'alert-circle' : 'info');
     
-    toast.className = `flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl shadow-${type === 'success' ? 'emerald' : 'rose'}-500/20 text-sm font-bold text-white transition-all duration-300 transform translate-y-[-20px] opacity-0 scale-95 ${bgClass} border border-white/10 backdrop-blur-md z-[100]`;
-    toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5"></i><span>${message}</span>`;
+    toast.className = `flex items-center gap-3 px-5 py-3.5 rounded-full shadow-2xl text-xs sm:text-sm font-bold transition-all duration-300 transform translate-y-[-16px] opacity-0 scale-95 ${bgClass} border border-white/10 backdrop-blur-md z-[100]`;
+    toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i><span>${message}</span>`;
     
     container.appendChild(toast);
     initIcons();
     
-    requestAnimationFrame(() => toast.classList.remove('translate-y-[-20px]', 'opacity-0', 'scale-95'));
+    requestAnimationFrame(() => toast.classList.remove('translate-y-[-16px]', 'opacity-0', 'scale-95'));
     setTimeout(() => {
-        toast.classList.add('translate-y-[-20px]', 'opacity-0', 'scale-95');
+        toast.classList.add('translate-y-[-16px]', 'opacity-0', 'scale-95');
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 3200);
 }
 
-// Global Modal Animation Handler Methods
+// Global Modal Display Utilities
 function openModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
@@ -211,6 +222,36 @@ function getOrderItems(order) {
     }];
 }
 
+// ================= DYNAMIC HISTORICAL CPP CALCULATION ENGINE =================
+// Lifetime Average CPP = Sum of all historical BNPL costs / Sum of all historical BNPL quantities
+function getProductHistoricalCPP(productName, fallbackUnitCost = 0) {
+    if (!productName) return fallbackUnitCost;
+    let totalCostSum = 0;
+    let totalQtySum = 0;
+
+    bnplRecords.forEach(record => {
+        if (record.items && Array.isArray(record.items)) {
+            record.items.forEach(bItem => {
+                if (bItem.itemName && bItem.itemName.toLowerCase().trim() === productName.toLowerCase().trim()) {
+                    totalCostSum += (parseFloat(bItem.totalCost) || 0);
+                    totalQtySum += (parseInt(bItem.qty) || 0);
+                }
+            });
+        }
+    });
+
+    if (totalQtySum > 0) {
+        return totalCostSum / totalQtySum;
+    }
+    return fallbackUnitCost || 0;
+}
+
+function syncInventoryCPP() {
+    inventory.forEach(item => {
+        item.unitCost = getProductHistoricalCPP(item.name, item.unitCost);
+    });
+}
+
 // ================= FLOATING CALCULATOR ENGINE =================
 function toggleCalculator(show) {
     const popup = document.getElementById('calculator-popup');
@@ -232,14 +273,17 @@ function toggleCalculator(show) {
 function pressCalc(val) {
     const screen = document.getElementById('calc-screen');
     if (!screen) return;
-    if (val === 'C') { screen.value = '0'; }
-    else if (val === '=') {
+    if (val === 'C') { 
+        screen.value = '0'; 
+    } else if (val === '=') {
         try {
             let expr = screen.value.replace(/[^0-9\+\-\*\.\/]/g, '');
             if (!expr) return;
             let result = new Function(`return (${expr})`)();
             screen.value = Number(result).toString();
-        } catch (e) { screen.value = 'Error'; }
+        } catch (e) { 
+            screen.value = 'Error'; 
+        }
     } else {
         if (screen.value === '0' || screen.value === 'Error') screen.value = val;
         else screen.value += val;
@@ -248,7 +292,7 @@ function pressCalc(val) {
 
 // ================= CART MODAL ENGINE =================
 function openCartModal() {
-    if (window.innerWidth >= 1280) return; // Desktop uses static column
+    if (window.innerWidth >= 1280) return;
     const modal = document.getElementById('cartModal');
     const wrapper = document.getElementById('cart-wrapper');
     if (!modal || !wrapper) return;
@@ -280,22 +324,26 @@ function closeCartOnBackdrop(e) {
     }
 }
 
-// ================= AUTHENTICATION =================
+// ================= AUTHENTICATION LOGIC =================
 auth.onAuthStateChanged(user => {
     const authScreen = document.getElementById('auth-screen');
     const appWrapper = document.getElementById('app-wrapper');
     
     if (user) {
-        authScreen.classList.add('hidden');
-        appWrapper.classList.remove('hidden');
-        appWrapper.classList.add('flex');
+        if (authScreen) authScreen.classList.add('hidden');
+        if (appWrapper) {
+            appWrapper.classList.remove('hidden');
+            appWrapper.classList.add('flex');
+        }
         startRealtimeSync();
         initTheme();
         initDateDefaults();
     } else {
-        authScreen.classList.remove('hidden');
-        appWrapper.classList.add('hidden');
-        appWrapper.classList.remove('flex');
+        if (authScreen) authScreen.classList.remove('hidden');
+        if (appWrapper) {
+            appWrapper.classList.add('hidden');
+            appWrapper.classList.remove('flex');
+        }
     }
     initIcons();
 });
@@ -304,14 +352,19 @@ function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
-    auth.signInWithEmailAndPassword(email, password).then(() => showToast('Signed in successfully', 'success')).catch(() => document.getElementById('auth-error').classList.remove('hidden'));
+    auth.signInWithEmailAndPassword(email, password)
+        .then(() => showToast('Signed in successfully', 'success'))
+        .catch(() => {
+            const authErr = document.getElementById('auth-error');
+            if (authErr) authErr.classList.remove('hidden');
+        });
 }
 
 function handleLogout() {
     auth.signOut();
 }
 
-// ================= DATABASE WRAPPERS =================
+// ================= DATABASE PERSISTENCE WRAPPERS =================
 function saveInventory() { db.ref('inventory').set(inventory); }
 function saveOrders() { db.ref('orders').set(orders); }
 function saveBundles() { db.ref('bundles').set(bundles); }
@@ -319,11 +372,12 @@ function saveActivityLog() { db.ref('activityLog').set(activityLog); }
 function saveStockHistory() { db.ref('stockHistory').set(stockHistory); }
 function saveBnpl() { db.ref('bnplRecords').set(bnplRecords); }
 
-// ================= FIREBASE REALTIME SYNC =================
+// ================= FIREBASE REALTIME SYNC LISTENERS =================
 function startRealtimeSync() {
     db.ref('inventory').on('value', snapshot => { 
         const data = snapshot.val(); 
         inventory = data ? Object.values(data) : []; 
+        syncInventoryCPP();
         renderUI(); 
     });
     db.ref('orders').on('value', snapshot => { 
@@ -343,7 +397,10 @@ function startRealtimeSync() {
     db.ref('bnplRecords').on('value', snapshot => {
         const data = snapshot.val();
         bnplRecords = data ? Object.values(data) : [];
+        syncInventoryCPP();
         renderBnplUI();
+        renderInventoryTable();
+        renderSummary();
     });
 
     db.ref('activityLog').on('value', snapshot => { 
@@ -363,8 +420,9 @@ function startRealtimeSync() {
     });
 }
 
-// ================= RENDER INTERACTION PIPELINES =================
+// ================= RENDER INTERACTION PIPELINE =================
 function renderUI() {
+    syncInventoryCPP();
     renderInventoryTable();
     renderOrdersTable();
     renderSummary();
@@ -376,7 +434,7 @@ function renderUI() {
     initIcons();
 }
 
-// ================= THEME & NAVIGATION =================
+// ================= THEME & TAB NAVIGATION =================
 function initTheme() {
     if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
@@ -428,10 +486,10 @@ function switchTab(tabId) {
     document.querySelectorAll('[data-tab-btn]').forEach(btn => {
         if (btn.dataset.tabBtn === tabId) { 
             btn.classList.add('tab-active'); 
-            btn.classList.remove('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); 
+            btn.classList.remove('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); 
         } else { 
             btn.classList.remove('tab-active'); 
-            btn.classList.add('text-slate-500', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); 
+            btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-800'); 
         }
     });
     if (tabId === 'orders') { renderPOSCatalog(); renderOrdersTable(); }
@@ -440,16 +498,16 @@ function switchTab(tabId) {
     if (tabId === 'inventory') renderInventoryTable();
 }
 
-// ================= DASHBOARD LOGIC =================
+// ================= EXECUTIVE DASHBOARD LOGIC =================
 function setDashboardTimeframe(tf) {
     dashboardTimeframe = tf;
     document.querySelectorAll('[data-timeframe]').forEach(btn => {
         if(btn.dataset.timeframe === tf) { 
-            btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); 
-            btn.classList.remove('text-slate-500'); 
+            btn.classList.add('bg-white', 'dark:bg-slate-800', 'shadow-xs', 'text-slate-900', 'dark:text-white'); 
+            btn.classList.remove('text-slate-500', 'dark:text-slate-400'); 
         } else { 
-            btn.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-800', 'dark:text-white'); 
-            btn.classList.add('text-slate-500'); 
+            btn.classList.remove('bg-white', 'dark:bg-slate-800', 'shadow-xs', 'text-slate-900', 'dark:text-white'); 
+            btn.classList.add('text-slate-500', 'dark:text-slate-400'); 
         }
     });
     renderSummary();
@@ -490,11 +548,11 @@ function openFinancialModal(type) {
         icon = type === 'revenue' ? 'trending-up' : 'piggy-bank';
         
         head.innerHTML = `
-            <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                <th class="py-3 px-4 sm:px-5">Date & Receipt ID</th>
-                <th class="py-3 px-3 sm:px-4">Baskets Line Items</th>
-                <th class="py-3 px-3 sm:px-4 text-right">Revenue</th>
-                <th class="py-3 px-3 sm:px-4 text-right">Profit</th>
+            <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase">
+                <th class="py-3.5 px-4 sm:px-5">Date & Receipt ID</th>
+                <th class="py-3.5 px-3 sm:px-4">Baskets Line Items</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right">Revenue</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right">Profit</th>
             </tr>
         `;
 
@@ -503,22 +561,22 @@ function openFinancialModal(type) {
             const lines = getOrderItems(o).map(i => `${i.qty}x ${i.name}`).join('<br>');
             list.innerHTML += `
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                    <td class="py-3 px-4 sm:px-5"><div class="font-bold text-slate-900 dark:text-white">${o.id}</div><div class="text-[10px] text-slate-500 mt-0.5">${o.date}</div></td>
+                    <td class="py-3 px-4 sm:px-5"><div class="font-bold text-slate-900 dark:text-white font-mono">${o.id}</div><div class="text-[10px] text-slate-500 mt-0.5">${o.date}</div></td>
                     <td class="py-3 px-3 sm:px-4 text-xs font-semibold text-slate-700 dark:text-slate-300 leading-normal">${lines}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400">₱ ${o.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-emerald-600 dark:text-emerald-400">₱ ${o.totalProfit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-brand-600 dark:text-brand-400 font-mono">₱ ${o.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono">₱ ${o.totalProfit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                 </tr>
             `;
         });
     } else if (type === 'outstanding') {
-        title = 'Outstanding Balances'; icon = 'clock-4';
+        title = 'Outstanding Balances'; icon = 'clock';
         
         head.innerHTML = `
-            <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                <th class="py-3 px-4 sm:px-5">Customer & Receipt ID</th>
-                <th class="py-3 px-3 sm:px-4 text-right">Total Owed</th>
-                <th class="py-3 px-3 sm:px-4 text-right">Amount Paid</th>
-                <th class="py-3 px-3 sm:px-4 text-right text-rose-500">Balance Due</th>
+            <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase">
+                <th class="py-3.5 px-4 sm:px-5">Customer & Receipt ID</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right">Total Owed</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right">Amount Paid</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right text-rose-500">Balance Due</th>
             </tr>
         `;
 
@@ -528,72 +586,74 @@ function openFinancialModal(type) {
             const due = o.totalRevenue - (o.amountPaid || 0);
             list.innerHTML += `
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                    <td class="py-3 px-4 sm:px-5"><div class="font-bold text-slate-900 dark:text-white">${o.customerName}</div><div class="text-[10px] text-slate-500 mt-0.5">${o.id}</div></td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-slate-700 dark:text-slate-300">₱ ${o.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-emerald-600 dark:text-emerald-400">₱ ${(o.amountPaid||0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-rose-600 dark:text-rose-400">₱ ${due.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-4 sm:px-5"><div class="font-bold text-slate-900 dark:text-white">${o.customerName}</div><div class="text-[10px] text-slate-500 mt-0.5 font-mono">${o.id}</div></td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-slate-700 dark:text-slate-300 font-mono">₱ ${o.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono">₱ ${(o.amountPaid||0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-rose-600 dark:text-rose-400 font-mono">₱ ${due.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 </tr>
             `;
         });
     } else if (type === 'inventory_value') {
         title = 'Inventory Value Breakdown'; icon = 'layers';
         head.innerHTML = `
-            <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                <th class="py-3 px-4 sm:px-5">Product Name</th>
-                <th class="py-3 px-3 sm:px-4 text-center">In Stock</th>
-                <th class="py-3 px-3 sm:px-4 text-right">Cost Price</th>
-                <th class="py-3 px-3 sm:px-4 text-right text-blue-500">Total Value</th>
+            <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase">
+                <th class="py-3.5 px-4 sm:px-5">Product Name</th>
+                <th class="py-3.5 px-3 sm:px-4 text-center">In Stock</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right">Cost Price</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right text-blue-500">Total Value</th>
             </tr>
         `;
         let validStock = inventory.filter(i => i.stockQty > 0);
         if(validStock.length === 0) list.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold">No active inventory value.</td></tr>`;
         validStock.forEach(i => {
-            const value = i.stockQty * (i.unitCost || 0);
+            const cpp = getProductHistoricalCPP(i.name, i.unitCost);
+            const value = i.stockQty * cpp;
             list.innerHTML += `
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                     <td class="py-3 px-4 sm:px-5 font-bold text-slate-900 dark:text-white">${i.name}</td>
                     <td class="py-3 px-3 sm:px-4 text-center font-bold text-slate-700 dark:text-slate-300">${i.stockQty}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-semibold text-slate-500">₱ ${(i.unitCost || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-blue-600 dark:text-blue-400">₱ ${value.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-semibold text-slate-500 font-mono">₱ ${cpp.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:4})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-blue-600 dark:text-blue-400 font-mono">₱ ${value.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 </tr>
             `;
         });
     } else if (type === 'expected_sales' || type === 'expected_profit') {
         title = type === 'expected_sales' ? 'Expected Sales Breakdown' : 'Expected Profit Breakdown';
         icon = type === 'expected_sales' ? 'tag' : 'trending-up';
-        let colColor = type === 'expected_sales' ? 'text-indigo-500' : 'text-emerald-500';
-        let valColor = type === 'expected_sales' ? 'text-indigo-600 dark:text-indigo-400' : 'text-emerald-600 dark:text-emerald-400';
+        let colColor = type === 'expected_sales' ? 'text-brand-500' : 'text-emerald-500';
+        let valColor = type === 'expected_sales' ? 'text-brand-600 dark:text-brand-400' : 'text-emerald-600 dark:text-emerald-400';
         
         head.innerHTML = `
-            <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                <th class="py-3 px-4 sm:px-5">Product Name</th>
-                <th class="py-3 px-3 sm:px-4 text-center">In Stock</th>
-                <th class="py-3 px-3 sm:px-4 text-right">${type === 'expected_sales' ? 'Selling Price' : 'Profit/Item'}</th>
-                <th class="py-3 px-3 sm:px-4 text-right ${colColor}">Expected Total</th>
+            <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase">
+                <th class="py-3.5 px-4 sm:px-5">Product Name</th>
+                <th class="py-3.5 px-3 sm:px-4 text-center">In Stock</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right">${type === 'expected_sales' ? 'Selling Price' : 'Profit/Item'}</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right ${colColor}">Expected Total</th>
             </tr>
         `;
         let validStock = inventory.filter(i => i.stockQty > 0);
         if(validStock.length === 0) list.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold">No active inventory.</td></tr>`;
         validStock.forEach(i => {
-            let unitVal = type === 'expected_sales' ? (i.sellPrice || 0) : ((i.sellPrice || 0) - (i.unitCost || 0));
+            const cpp = getProductHistoricalCPP(i.name, i.unitCost);
+            let unitVal = type === 'expected_sales' ? (i.sellPrice || 0) : ((i.sellPrice || 0) - cpp);
             let expectedTotal = i.stockQty * unitVal;
             list.innerHTML += `
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                     <td class="py-3 px-4 sm:px-5 font-bold text-slate-900 dark:text-white">${i.name}</td>
                     <td class="py-3 px-3 sm:px-4 text-center font-bold text-slate-700 dark:text-slate-300">${i.stockQty}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-semibold text-slate-500">₱ ${unitVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black ${valColor}">₱ ${expectedTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-semibold text-slate-500 font-mono">₱ ${unitVal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black ${valColor} font-mono">₱ ${expectedTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 </tr>
             `;
         });
     } else if (type === 'money_spent') {
         title = 'Money Spent (Purchase History)'; icon = 'shopping-bag';
         head.innerHTML = `
-            <tr class="text-slate-500 text-[10px] font-black tracking-wider text-left uppercase">
-                <th class="py-3 px-4 sm:px-5">Date</th>
-                <th class="py-3 px-3 sm:px-4">Product Name</th>
-                <th class="py-3 px-3 sm:px-4 text-center">Qty Purchased</th>
-                <th class="py-3 px-3 sm:px-4 text-right text-amber-500">Total Spent</th>
+            <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase">
+                <th class="py-3.5 px-4 sm:px-5">Date</th>
+                <th class="py-3.5 px-3 sm:px-4">Product Name</th>
+                <th class="py-3.5 px-3 sm:px-4 text-center">Qty Purchased</th>
+                <th class="py-3.5 px-3 sm:px-4 text-right text-amber-500">Total Spent</th>
             </tr>
         `;
         if(stockHistory.length === 0) list.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-400 font-bold">No purchase history.</td></tr>`;
@@ -603,13 +663,13 @@ function openFinancialModal(type) {
                     <td class="py-3 px-4 sm:px-5 text-[11px] font-bold text-slate-500">${sh.date}</td>
                     <td class="py-3 px-3 sm:px-4 font-bold text-slate-900 dark:text-white">${sh.productName}</td>
                     <td class="py-3 px-3 sm:px-4 text-center font-bold text-slate-700 dark:text-slate-300">${sh.qtyAdded}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-amber-600 dark:text-amber-400">₱ ${sh.totalCost.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-amber-600 dark:text-amber-400 font-mono">₱ ${sh.totalCost.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 </tr>
             `;
         });
     }
 
-    document.getElementById('details-modal-title').innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 text-indigo-500"></i> ${title}`;
+    document.getElementById('details-modal-title').innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 text-brand-500"></i> ${title}`;
     openModal('details-modal');
     initIcons();
 }
@@ -633,20 +693,20 @@ function openDashboardModal(filterType) {
         list.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No products to show.</td></tr>`;
     } else {
         filtered.forEach(item => {
-            let badge = item.stockQty <= 0 ? `<span class="inline-block bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Out of Stock</span>`
-                : (item.stockQty <= 3 ? `<span class="inline-block bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Low Stock</span>` : `<span class="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">In Stock</span>`);
+            let badge = item.stockQty <= 0 ? `<span class="inline-block bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">Out of Stock</span>`
+                : (item.stockQty <= 3 ? `<span class="inline-block bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">Low Stock</span>` : `<span class="inline-block bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">In Stock</span>`);
 
             list.innerHTML += `
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                     <td class="py-3 px-4 sm:px-5 font-bold text-slate-900 dark:text-white">${item.name}</td>
-                    <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                    <td class="py-3 px-4 sm:px-5 text-right flex items-center justify-end gap-2"><span class="font-black text-sm">${item.stockQty}</span>${badge}</td>
+                    <td class="py-3 px-3 sm:px-4 text-right font-black text-brand-600 dark:text-brand-400 font-mono">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="py-3 px-4 sm:px-5 text-right flex items-center justify-end gap-2"><span class="font-black text-sm font-mono">${item.stockQty}</span>${badge}</td>
                 </tr>
             `;
         });
     }
 
-    document.getElementById('dash-modal-title').innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 text-indigo-500"></i> ${title}`;
+    document.getElementById('dash-modal-title').innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 text-brand-500"></i> ${title}`;
     openModal('dash-products-modal'); initIcons();
 }
 
@@ -655,22 +715,22 @@ function renderActivityLog() {
     if (!container) return; container.innerHTML = '';
 
     if (activityLog.length === 0) {
-        container.innerHTML = `<div class="py-6 text-center text-slate-400 text-xs font-bold"><i data-lucide="history" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No recent activity.</div>`;
+        container.innerHTML = `<div class="py-6 text-center text-slate-400 text-xs font-bold"><i data-lucide="history" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No recent activity logged.</div>`;
         initIcons(); return;
     }
 
     activityLog.slice(0, 15).forEach(act => {
         let icon = 'info', iconColor = 'text-slate-500 bg-slate-100 dark:bg-slate-800';
-        if(act.type === 'stock_in') { icon = 'package-plus'; iconColor = 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/20'; }
-        else if(act.type === 'sale') { icon = 'shopping-cart'; iconColor = 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/20'; }
-        else if(act.type === 'stock_adj') { icon = 'settings-2'; iconColor = 'text-amber-500 bg-amber-50 dark:bg-amber-500/20'; }
+        if(act.type === 'stock_in') { icon = 'package-plus'; iconColor = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/20'; }
+        else if(act.type === 'sale') { icon = 'shopping-bag'; iconColor = 'text-brand-600 bg-brand-50 dark:bg-brand-500/20'; }
+        else if(act.type === 'stock_adj') { icon = 'settings-2'; iconColor = 'text-amber-600 bg-amber-50 dark:bg-amber-500/20'; }
 
         container.innerHTML += `
-            <div class="relative flex items-center gap-4">
-                <div class="z-10 w-8 h-8 flex items-center justify-center rounded-full shadow-sm flex-shrink-0 ${iconColor} border border-slate-200/50 dark:border-slate-700/50"><i data-lucide="${icon}" class="w-4 h-4"></i></div>
-                <div class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+            <div class="relative flex items-center gap-3.5">
+                <div class="z-10 w-8 h-8 flex items-center justify-center rounded-full shadow-xs flex-shrink-0 ${iconColor} border border-slate-200/50 dark:border-darkborder"><i data-lucide="${icon}" class="w-4 h-4"></i></div>
+                <div class="flex-1 min-w-0 bg-slate-50 dark:bg-darkinput/80 p-3 rounded-2xl border border-slate-100 dark:border-darkborder">
                     <p class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${act.message}</p>
-                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-wide mt-0.5">${act.date}</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-0.5">${act.date}</p>
                 </div>
             </div>
         `;
@@ -678,7 +738,7 @@ function renderActivityLog() {
     initIcons();
 }
 
-// ================= UNIVERSAL MULTI-COLUMN SORT HELPER =================
+// ================= MULTI-COLUMN TABLE SORTING STACK SYSTEM =================
 function handleMultiColumnSortToggle(stack, col, isShift) {
     const existingIndex = stack.findIndex(item => item.col === col);
     if (isShift) {
@@ -719,7 +779,7 @@ function updateSortHeaderIcons(prefix, stack, columns) {
     });
 }
 
-// ================= INVENTORY LOGIC =================
+// ================= INVENTORY CONTROL LOGIC =================
 function toggleInventorySort(column, event) {
     const isShift = event && event.shiftKey;
     handleMultiColumnSortToggle(inventorySortStack, column, isShift);
@@ -737,8 +797,8 @@ function showDropdown() {
     if (filteredItems.length > 0) {
         filteredItems.forEach(item => {
             const row = document.createElement('div');
-            row.className = "px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-sm font-bold flex justify-between items-center transition-colors group";
-            row.innerHTML = `<span class="group-hover:text-indigo-600 dark:group-hover:text-indigo-400">${item.name}</span><span class="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
+            row.className = "px-4 py-3 hover:bg-brand-50 dark:hover:bg-brand-950/40 cursor-pointer text-xs font-bold flex justify-between items-center transition-colors group";
+            row.innerHTML = `<span class="group-hover:text-brand-600 dark:group-hover:text-brand-400 text-slate-900 dark:text-slate-100">${item.name}</span><span class="text-[11px] font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
             row.addEventListener('mousedown', () => {
                 itemNameInput.value = item.name;
                 document.getElementById('sell-price').value = item.sellPrice || 0;
@@ -788,7 +848,7 @@ function commitNewProduct(name, sellPrice, base64Image, recMin = 0, recMax = 0) 
     const existingIndex = inventory.findIndex(item => item.name.toLowerCase() === name.toLowerCase());
 
     if (existingIndex > -1) {
-        showToast("Product is already registered. Please edit details below instead.", "error");
+        showToast("Product is already registered. Please edit details below.", "error");
     } else {
         inventory.push({ 
             id: Date.now().toString(), 
@@ -800,9 +860,10 @@ function commitNewProduct(name, sellPrice, base64Image, recMin = 0, recMax = 0) 
             recCppMin: recMin,
             recCppMax: recMax
         });
-        logActivity('stock_adj', `Registered new empty product container: ${name}`);
+        logActivity('stock_adj', `Registered new product container: ${name}`);
         showToast("New product container registered", "success");
     }
+    syncInventoryCPP();
     saveInventory();
     saveActivityLog();
     
@@ -821,18 +882,18 @@ function renderStockHistory() {
     list.innerHTML = '';
     
     if(stockHistory.length === 0) {
-        list.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="history" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>No stock history records.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="history" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>No stock history records available.</td></tr>`;
         initIcons(); return;
     }
 
     stockHistory.forEach(sh => {
         list.innerHTML += `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                <td class="py-3 px-4 sm:px-5 text-[11px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap">${sh.date}</td>
-                <td class="py-3 px-3 sm:px-4 font-bold text-slate-900 dark:text-white">${sh.productName}</td>
-                <td class="py-3 px-3 sm:px-4 text-center font-black text-indigo-600 dark:text-indigo-400">+${sh.qtyAdded}</td>
-                <td class="py-3 px-3 sm:px-4 text-right font-semibold text-slate-600 dark:text-slate-300">₱ ${(sh.costPerItem || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td class="py-3 px-4 sm:px-5 text-right font-black text-amber-600 dark:text-amber-400">₱ ${(sh.totalCost || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                <td class="py-3.5 px-5 text-[11px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap">${sh.date}</td>
+                <td class="py-3.5 px-4 font-bold text-slate-900 dark:text-white">${sh.productName}</td>
+                <td class="py-3.5 px-4 text-center font-black text-brand-600 dark:text-brand-400 font-mono">+${sh.qtyAdded}</td>
+                <td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-600 dark:text-slate-300">₱ ${(sh.costPerItem || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                <td class="py-3.5 px-5 text-right font-mono font-black text-amber-600 dark:text-amber-400">₱ ${(sh.totalCost || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
             </tr>
         `;
     });
@@ -841,10 +902,12 @@ function renderStockHistory() {
 function editStock(id) {
     const item = inventory.find(i => i.id === id);
     if (!item) return;
+    const historicalCPP = getProductHistoricalCPP(item.name, item.unitCost);
+
     document.getElementById('edit-stock-id').value = item.id;
     document.getElementById('edit-stock-name').value = item.name;
     document.getElementById('edit-stock-qty').value = item.stockQty;
-    document.getElementById('edit-stock-cost').value = (item.unitCost || 0).toFixed(2);
+    document.getElementById('edit-stock-cost').value = historicalCPP.toFixed(2);
     document.getElementById('edit-stock-price').value = item.sellPrice || 0;
     
     const minVal = item.recCppMin || 0;
@@ -878,17 +941,18 @@ function saveStockEdit(e) {
 
         if (adjQty !== 0) {
             item.stockQty += adjQty;
-            logActivity('stock_adj', `Manually adjusted stock level of ${name} by ${adjQty > 0 ? '+'+adjQty : adjQty} (${adjType})`);
+            logActivity('stock_adj', `Manually adjusted stock of ${name} by ${adjQty > 0 ? '+'+adjQty : adjQty} (${adjType})`);
         }
 
         item.name = name; 
         item.sellPrice = price;
         
         const completeSave = () => {
+            syncInventoryCPP();
             saveInventory();
             saveActivityLog();
             if(requiresOrderUpdate) saveOrders();
-            showToast("Product updated", "success"); 
+            showToast("Product updated successfully", "success"); 
             closeModal('stock-modal');
         };
 
@@ -910,6 +974,91 @@ function saveStockEdit(e) {
     }
 }
 
+function deleteStock(id) {
+    const item = inventory.find(i => i.id === id);
+    if (!item) return;
+
+    requestUserConfirmation(
+        "Delete Inventory Product",
+        `Are you sure you want to permanently delete "${item.name}"? Sales logs and AP records will remain intact.`,
+        "Delete",
+        () => {
+            inventory = inventory.filter(i => i.id !== id);
+            saveInventory();
+            logActivity('stock_adj', `Permanently deleted product: ${item.name}`);
+            saveActivityLog();
+            renderUI();
+            showToast("Product permanently removed", "info");
+        }
+    );
+}
+
+function openCreateRejectModal(id) {
+    const sourceItem = inventory.find(i => i.id === id);
+    if (!sourceItem) return;
+
+    document.getElementById('reject-source-id').value = sourceItem.id;
+    document.getElementById('reject-stock-name').value = sourceItem.name + ' (Defective)';
+    document.getElementById('reject-stock-status').value = 'Damaged';
+    document.getElementById('reject-stock-qty').value = 1;
+    document.getElementById('reject-stock-price').value = (sourceItem.sellPrice * 0.5).toFixed(2);
+    document.getElementById('reject-stock-notes').value = '';
+
+    openModal('reject-stock-modal');
+}
+
+function handleCreateRejectStockSubmit(e) {
+    e.preventDefault();
+    const sourceId = document.getElementById('reject-source-id').value;
+    const sourceItem = inventory.find(i => i.id === sourceId);
+    
+    const rejectName = document.getElementById('reject-stock-name').value.trim();
+    const rejectStatus = document.getElementById('reject-stock-status').value;
+    const rejectQty = parseInt(document.getElementById('reject-stock-qty').value) || 0;
+    const rejectPrice = parseFloat(document.getElementById('reject-stock-price').value) || 0;
+    const rejectNotes = document.getElementById('reject-stock-notes').value.trim();
+
+    if (!sourceItem) {
+        showToast("Source item not found", "error");
+        return;
+    }
+
+    if (rejectQty <= 0) {
+        showToast("Please enter a valid quantity", "error");
+        return;
+    }
+
+    if (rejectQty > sourceItem.stockQty) {
+        showToast(`Cannot deduct ${rejectQty} pcs. Only ${sourceItem.stockQty} in stock.`, "error");
+        return;
+    }
+
+    sourceItem.stockQty -= rejectQty;
+
+    const newRejectItem = {
+        id: 'REJ-' + Date.now().toString().slice(-6),
+        name: rejectName,
+        unitCost: sourceItem ? getProductHistoricalCPP(sourceItem.name, sourceItem.unitCost) : 0,
+        sellPrice: rejectPrice,
+        stockQty: rejectQty,
+        image: sourceItem ? sourceItem.image : null,
+        isReject: true,
+        rejectStatus: rejectStatus,
+        notes: rejectNotes,
+        recCppMin: 0,
+        recCppMax: 0
+    };
+
+    inventory.push(newRejectItem);
+    saveInventory();
+    logActivity('stock_adj', `Created ${rejectStatus} item: ${rejectName} (${rejectQty} pcs deducted from ${sourceItem.name})`);
+    saveActivityLog();
+    
+    closeModal('reject-stock-modal');
+    renderUI();
+    showToast(`${rejectStatus} stock item created. ${rejectQty} pcs deducted from ${sourceItem.name}.`, "success");
+}
+
 function getSortedInventory() {
     let sorted = [...inventory];
     if (inventorySortStack.length > 0) {
@@ -919,17 +1068,20 @@ function getSortedInventory() {
                 const dirMod = dir === 'asc' ? 1 : -1;
                 let diff = 0;
                 
+                const cppA = getProductHistoricalCPP(a.name, a.unitCost);
+                const cppB = getProductHistoricalCPP(b.name, b.unitCost);
+
                 if (col === 'name') diff = a.name.localeCompare(b.name);
                 else if (col === 'stock') diff = (a.stockQty || 0) - (b.stockQty || 0);
-                else if (col === 'cpp') diff = (a.unitCost || 0) - (b.unitCost || 0);
+                else if (col === 'cpp') diff = cppA - cppB;
                 else if (col === 'price') diff = (a.sellPrice || 0) - (b.sellPrice || 0);
-                else if (col === 'profit') diff = ((a.sellPrice || 0) - (a.unitCost || 0)) - ((b.sellPrice || 0) - (b.unitCost || 0));
+                else if (col === 'profit') diff = ((a.sellPrice || 0) - cppA) - ((b.sellPrice || 0) - cppB);
                 else if (col === 'margin') {
-                    const mA = a.sellPrice > 0 ? ((a.sellPrice - (a.unitCost || 0)) / a.sellPrice) : 0;
-                    const mB = b.sellPrice > 0 ? ((b.sellPrice - (b.unitCost || 0)) / b.sellPrice) : 0;
+                    const mA = a.sellPrice > 0 ? ((a.sellPrice - cppA) / a.sellPrice) : 0;
+                    const mB = b.sellPrice > 0 ? ((b.sellPrice - cppB) / b.sellPrice) : 0;
                     diff = mA - mB;
                 }
-                else if (col === 'value') diff = ((a.stockQty || 0) * (a.unitCost || 0)) - ((b.stockQty || 0) * (b.unitCost || 0));
+                else if (col === 'value') diff = ((a.stockQty || 0) * cppA) - ((b.stockQty || 0) * cppB);
 
                 if (diff !== 0) return diff * dirMod;
             }
@@ -946,23 +1098,28 @@ function renderInventoryTable() {
     const displayList = getSortedInventory();
     
     if(displayList.length === 0) { 
-        list.innerHTML = `<tr><td colspan="8" class="py-12 text-center text-slate-400"><i data-lucide="package-open" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">Stock room is empty</p></td></tr>`; 
+        list.innerHTML = `<tr><td colspan="8" class="py-12 text-center text-slate-400"><i data-lucide="package-open" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">Inventory database is empty</p></td></tr>`; 
         initIcons(); return; 
-    }
+    } 
     
     displayList.forEach(item => {
-        let detailBlock = '';
-        if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" class="w-10 h-10 object-cover rounded-xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
-        else detailBlock = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-sm flex-shrink-0 border border-indigo-100 dark:border-indigo-800/50">${item.name.substring(0,2).toUpperCase()}</div><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">${item.name}</span></div></div>`;
+        let statusBadge = '';
+        if (item.isReject) {
+            statusBadge = `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40">${item.rejectStatus || 'Reject'}</span>`;
+        }
 
-        const averageCPP = item.unitCost || 0;
+        let detailBlock = '';
+        if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" class="w-10 h-10 object-cover rounded-2xl shadow-xs border border-slate-200/50 dark:border-darkborder flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate flex items-center">${item.name}${statusBadge}</span>${item.notes ? `<span class="text-[10px] text-slate-400 truncate max-w-[140px]">${item.notes}</span>` : ''}</div></div>`;
+        else detailBlock = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 flex items-center justify-center font-black text-xs flex-shrink-0 border border-brand-100 dark:border-brand-900/50">${item.name.substring(0,2).toUpperCase()}</div><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate flex items-center">${item.name}${statusBadge}</span>${item.notes ? `<span class="text-[10px] text-slate-400 truncate max-w-[140px]">${item.notes}</span>` : ''}</div></div>`;
+
+        const averageCPP = getProductHistoricalCPP(item.name, item.unitCost);
         const sellingPrice = item.sellPrice || 0;
         const profitPerPiece = sellingPrice - averageCPP;
         const profitMargin = sellingPrice > 0 ? (profitPerPiece / sellingPrice) * 100 : 0;
         const totalValue = item.stockQty * averageCPP;
 
         const row = document.createElement('tr');
-        row.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer";
+        row.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer " + (item.isReject ? 'bg-rose-50/30 dark:bg-rose-950/10' : '');
         
         row.onclick = (e) => {
             if (e.target.closest('.action-prevent-trigger') || e.target.closest('button')) return;
@@ -970,28 +1127,37 @@ function renderInventoryTable() {
         };
 
         row.innerHTML = `
-            <td class="py-3 px-4 sm:px-5 whitespace-nowrap">
+            <td class="py-3.5 px-4 sm:px-5 whitespace-nowrap">
                 ${detailBlock}
             </td>
-            <td class="py-3 px-3 sm:px-4 text-center">
-                <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-black tracking-wide ${item.stockQty <= 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : (item.stockQty <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300')} border ${item.stockQty <= 0 ? 'border-rose-200 dark:border-rose-800/30' : (item.stockQty <= 3 ? 'border-amber-200 dark:border-amber-800/30' : 'border-slate-200 dark:border-slate-700/50')}">${item.stockQty} pcs</span>
+            <td class="py-3.5 px-3 sm:px-4 text-center">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black tracking-wide ${item.stockQty <= 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : (item.stockQty <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300')} border ${item.stockQty <= 0 ? 'border-rose-200 dark:border-rose-800/30' : (item.stockQty <= 3 ? 'border-amber-200 dark:border-amber-800/30' : 'border-slate-200 dark:border-slate-700/50')}">${item.stockQty} pcs</span>
             </td>
-            <td class="py-3 px-3 sm:px-4 text-right text-slate-500 font-semibold tracking-tight">₱ ${averageCPP.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-            <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400 tracking-tight">₱ ${sellingPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-            <td class="py-3 px-3 sm:px-4 text-right font-bold text-emerald-600 tracking-tight">₱ ${profitPerPiece.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-            <td class="py-3 px-3 sm:px-4 text-right font-black text-indigo-500">${profitMargin.toFixed(2)}%</td>
-            <td class="py-3 px-3 sm:px-4 text-right font-semibold text-slate-700 dark:text-slate-200">₱ ${totalValue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-            <td class="py-3 px-4 sm:px-5 text-right action-prevent-trigger">
-                <div class="flex items-center justify-end gap-1.5 sm:gap-2">
-                    <button onclick="addToCart('${item.id}'); switchTab('orders');" title="Sell" class="p-2 sm:p-2.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-xl transition-colors border border-indigo-100 dark:border-indigo-800/30 shadow-sm btn-transition min-h-[36px] min-w-[36px] flex items-center justify-center"><i data-lucide="plus" class="w-4 h-4"></i></button>
+            <td class="py-3.5 px-3 sm:px-4 text-right text-slate-500 font-mono font-semibold tracking-tight" title="${averageCPP}">₱ ${averageCPP.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:4})}</td>
+            <td class="py-3.5 px-3 sm:px-4 text-right font-black text-brand-600 dark:text-brand-400 font-mono tracking-tight">₱ ${sellingPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="py-3.5 px-3 sm:px-4 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">₱ ${profitPerPiece.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="py-3.5 px-3 sm:px-4 text-right font-black text-brand-500 font-mono">${profitMargin.toFixed(2)}%</td>
+            <td class="py-3.5 px-3 sm:px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-200">₱ ${totalValue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td class="py-3.5 px-4 sm:px-5 text-right action-prevent-trigger">
+                <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="addToCart('${item.id}'); switchTab('orders');" title="Sell Item" class="p-2 text-brand-600 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 rounded-full transition-colors border border-brand-100 dark:border-brand-800/30 shadow-xs btn-transition flex items-center justify-center min-w-[34px] min-h-[34px]">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                    ${!item.isReject ? `<button onclick="openCreateRejectModal('${item.id}')" title="Isolate Defective Item" class="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 rounded-full transition-colors border border-amber-100 dark:border-amber-800/30 shadow-xs btn-transition flex items-center justify-center min-w-[34px] min-h-[34px]">
+                        <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+                    </button>` : ''}
+                    <button onclick="deleteStock('${item.id}')" title="Delete Product" class="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-full transition-colors border border-rose-100 dark:border-rose-800/30 shadow-xs btn-transition flex items-center justify-center min-w-[34px] min-h-[34px]">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
                 </div>
             </td>
         `;
         list.appendChild(row);
     });
+    initIcons();
 }
 
-// ================= BUNDLES & PROMOS LOGIC =================
+// ================= BUNDLES & PROMOTIONS LOGIC =================
 function toggleBundleSort(column, event) {
     const isShift = event && event.shiftKey;
     handleMultiColumnSortToggle(bundleSortStack, column, isShift);
@@ -1031,7 +1197,7 @@ function renderDraftBundleItems() {
     if (!list) return;
     list.innerHTML = '';
     draftBundleItems.forEach((d, i) => {
-        list.innerHTML += `<div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-600"><span>${d.qty}x ${d.name}</span><button type="button" onclick="removeDraftBundleItem(${i})" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-md btn-transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>`;
+        list.innerHTML += `<div class="flex justify-between items-center bg-white dark:bg-darkcard p-2.5 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-darkborder shadow-xs transition-all hover:border-brand-300 dark:hover:border-brand-600"><span>${d.qty}x ${d.name}</span><button type="button" onclick="removeDraftBundleItem(${i})" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-full btn-transition"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>`;
     }); initIcons();
 }
 
@@ -1041,16 +1207,16 @@ function handleBundleSubmit(e) {
     const name = document.getElementById('bundle-name').value.trim();
     const price = parseFloat(document.getElementById('bundle-price').value);
 
-    if(draftBundleItems.length === 0) { showToast("Add items to the promo bundle.", "error"); return; }
+    if(draftBundleItems.length === 0) { showToast("Add line items to the promo bundle.", "error"); return; }
     if(editingBundleId) {
         const index = bundles.findIndex(b => b.id === editingBundleId);
         if (index > -1) {
             bundles[index] = { ...bundles[index], type, name, price, items: draftBundleItems };
-            showToast("Promo updated", "success"); cancelBundleEdit();
+            showToast("Promo bundle updated", "success"); cancelBundleEdit();
         }
     } else {
         bundles.push({ id: 'bndl-' + Date.now().toString(), type, name, price, isActive: true, items: draftBundleItems });
-        showToast("New promo created", "success"); document.getElementById('bundle-form').reset(); draftBundleItems = []; renderDraftBundleItems();
+        showToast("New promo bundle created", "success"); document.getElementById('bundle-form').reset(); draftBundleItems = []; renderDraftBundleItems();
     } 
     saveBundles(); 
 }
@@ -1079,7 +1245,7 @@ function toggleBundleStatus(id) {
     if(bundle) { 
         bundle.isActive = !bundle.isActive; 
         saveBundles(); 
-        showToast(bundle.isActive ? "Promo enabled" : "Promo disabled", "info"); 
+        showToast(bundle.isActive ? "Promo bundle activated" : "Promo bundle disabled", "info"); 
     } 
 }
 
@@ -1087,19 +1253,17 @@ function deleteBundle(id) {
     requestUserConfirmation("Delete Promo", "Permanently delete this promo bundle?", "Delete", () => {
         bundles = bundles.filter(b => b.id !== id); 
         saveBundles(); 
-        showToast("Promo deleted", "success"); 
+        showToast("Promo bundle deleted", "success"); 
     });
 }
 
 function getSortedBundles() {
     let sorted = [...bundles];
     sorted.sort((a, b) => {
-        // DEFAULT BEHAVIOR: Active promos always appear first
         if (a.isActive !== b.isActive) {
             return a.isActive ? -1 : 1;
         }
 
-        // Apply multi-column sorting within sections
         if (bundleSortStack.length > 0) {
             for (let sortObj of bundleSortStack) {
                 const { col, dir } = sortObj;
@@ -1128,23 +1292,24 @@ function renderBundlesTable() {
     
     const displayBundles = getSortedBundles();
 
-    if(displayBundles.length === 0) { list.innerHTML = `<tr><td colspan="5" class="py-12 text-center"><div class="flex flex-col items-center justify-center text-slate-400"><i data-lucide="tags" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="sm:text-sm text-xs font-bold">No promos active.</p></div></td></tr>`; initIcons(); return; }
+    if(displayBundles.length === 0) { list.innerHTML = `<tr><td colspan="5" class="py-12 text-center"><div class="flex flex-col items-center justify-center text-slate-400"><i data-lucide="sparkles" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="sm:text-sm text-xs font-bold">No promo bundles created.</p></div></td></tr>`; initIcons(); return; }
 
     displayBundles.forEach(bundle => {
-        const itemsStr = bundle.items.map(i => `<span class="inline-block bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-md font-bold text-[10px] mr-1.5 mb-1.5 shadow-sm border border-slate-200 dark:border-slate-600">${i.qty}x ${i.name}</span>`).join('');
+        const itemsStr = bundle.items.map(i => `<span class="block w-fit bg-slate-100 dark:bg-darkinput text-slate-800 dark:text-slate-200 px-3 py-1.5 rounded-xl font-bold text-[11px] mb-1.5 border border-slate-200/80 dark:border-darkborder leading-snug break-words max-w-full text-left">${i.qty}x ${i.name}</span>`).join('');
+        
         list.innerHTML += `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${!bundle.isActive ? 'opacity-50 grayscale' : ''}">
-                <td class="py-4 px-4 sm:px-5"><div class="font-black text-sm text-slate-900 dark:text-white">${bundle.name}</div><div class="text-[9px] uppercase tracking-wider font-bold text-indigo-500 mt-1">${bundle.type} Item Bundle</div></td>
-                <td class="py-4 px-3 sm:px-4 text-xs">${itemsStr}</td>
-                <td class="py-4 px-3 sm:px-4 text-right font-black text-emerald-600 dark:text-emerald-400 tracking-tight">₱ ${bundle.price.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td class="py-4 px-3 sm:px-4 text-center"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" onchange="toggleBundleStatus('${bundle.id}')" class="sr-only peer" ${bundle.isActive ? 'checked' : ''}><div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-500 shadow-inner"></div></label></td>
-                <td class="py-4 px-4 sm:px-5 text-right whitespace-nowrap"><button onclick="editBundle('${bundle.id}')" title="Edit" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="deleteBundle('${bundle.id}')" title="Delete" class="p-2 sm:p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                <td class="py-3.5 px-4 sm:px-5"><div class="font-extrabold text-sm text-slate-900 dark:text-white">${bundle.name}</div><div class="text-[9px] uppercase tracking-widest font-extrabold text-brand-500 mt-0.5">${bundle.type} Item Bundle</div></td>
+                <td class="py-3.5 px-3 sm:px-4 text-xs">${itemsStr}</td>
+                <td class="py-3.5 px-3 sm:px-4 text-right font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight">₱ ${bundle.price.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                <td class="py-3.5 px-3 sm:px-4 text-center"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" onchange="toggleBundleStatus('${bundle.id}')" class="sr-only peer" ${bundle.isActive ? 'checked' : ''}><div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-slate-700 peer-checked:bg-emerald-500 shadow-inner"></div></label></td>
+                <td class="py-3.5 px-4 sm:px-5 text-right whitespace-nowrap"><button onclick="editBundle('${bundle.id}')" title="Edit Bundle" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="deleteBundle('${bundle.id}')" title="Delete Bundle" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-full transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
             </tr>
         `;
     }); initIcons();
 }
 
-// ================= POS CART ENGINE & LOGIC =================
+// ================= POINT OF SALE (POS) BASKET & PROMO ENGINE =================
 function calculateCart() {
     let cartSnapshot = JSON.parse(JSON.stringify(cart));
     let savings = 0; let appliedBundles = []; let total = 0;
@@ -1189,16 +1354,20 @@ function renderPOSCatalog() {
     if(!grid || !searchEl) return; grid.innerHTML = '';
     const searchVal = searchEl.value.toLowerCase(); const itemsToDisplay = inventory.filter(i => i.name.toLowerCase().includes(searchVal));
     
-    if(itemsToDisplay.length === 0) { grid.innerHTML = `<div class="col-span-full py-12 flex flex-col items-center justify-center text-slate-400"><i data-lucide="search-x" class="w-10 h-10 mb-3 opacity-30"></i><p class="text-sm font-bold">No products found.</p></div>`; initIcons(); return; }
+    if(itemsToDisplay.length === 0) { grid.innerHTML = `<div class="col-span-full py-12 flex flex-col items-center justify-center text-slate-400"><i data-lucide="search-x" class="w-10 h-10 mb-2 opacity-30"></i><p class="text-xs font-bold">No products match search criteria.</p></div>`; initIcons(); return; }
 
     itemsToDisplay.forEach(item => {
-        let imageBlock = item.image ? `<div class="aspect-square w-full rounded-[14px] mb-3 overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50"><img src="${item.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"></div>`
-            : `<div class="aspect-square w-full rounded-[14px] mb-3 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-3xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-inner">${item.name.substring(0,2).toUpperCase()}</div>`;
+        let imageBlock = item.image ? `<div class="aspect-square w-full rounded-2xl mb-2 overflow-hidden bg-slate-100 dark:bg-darkinput border border-slate-200/50 dark:border-darkborder"><img src="${item.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"></div>`
+            : `<div class="aspect-square w-full rounded-2xl mb-2 bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 flex items-center justify-center font-black text-xl border border-brand-100/50 dark:border-brand-900/50 shadow-inner">${item.name.substring(0,2).toUpperCase()}</div>`;
         const outOfStock = item.stockQty <= 0;
         grid.innerHTML += `
-            <div onclick="${outOfStock ? '' : `addToCart('${item.id}')`}" class="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 rounded-2xl p-3 flex flex-col justify-between transition-all shadow-sm ${outOfStock ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md cursor-pointer group active:scale-[0.98]'}">
-                <div>${imageBlock}<h4 class="font-bold text-xs leading-tight mb-1 text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors line-clamp-2">${item.name}</h4><span class="text-[10px] font-black uppercase tracking-wider ${outOfStock ? 'text-rose-500' : 'text-slate-500'}">${item.stockQty} in stock</span></div>
-                <div class="mt-3 flex items-center justify-between"><span class="text-indigo-600 dark:text-indigo-400 font-black text-sm tracking-tight">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>${!outOfStock ? `<div class="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-700 group-hover:bg-indigo-100 dark:hover:bg-indigo-900/50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm"><i data-lucide="plus" class="w-4 h-4"></i></div>` : ''}</div>
+            <div onclick="${outOfStock ? '' : `addToCart('${item.id}')`}" class="bg-white dark:bg-darkcard border border-slate-200/80 dark:border-darkborder rounded-3xl p-3 flex flex-col justify-between transition-all shadow-xs ${outOfStock ? 'opacity-40 grayscale cursor-not-allowed' : 'hover:border-brand-400 dark:hover:border-brand-500 hover:shadow-md cursor-pointer group active:scale-[0.98]'}">
+                <div>
+                    ${imageBlock}
+                    <h4 class="font-extrabold text-[11px] leading-tight mb-1 text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">${item.name}</h4>
+                    <span class="text-[9px] font-black uppercase tracking-wider ${outOfStock ? 'text-rose-500' : 'text-slate-400'}">${item.stockQty} in stock</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between"><span class="text-brand-600 dark:text-brand-400 font-mono font-black text-xs sm:text-sm tracking-tight">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>${!outOfStock ? `<div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-brand-100 dark:group-hover:bg-brand-950 flex items-center justify-center text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors"><i data-lucide="plus" class="w-3.5 h-3.5"></i></div>` : ''}</div>
             </div>
         `;
     }); initIcons();
@@ -1207,11 +1376,13 @@ function renderPOSCatalog() {
 function addToCart(itemId) {
     const item = inventory.find(i => i.id === itemId); if(!item || item.stockQty <= 0) return;
     const cartItem = cart.find(c => c.id === itemId);
+    const historicalCPP = getProductHistoricalCPP(item.name, item.unitCost);
+
     if(cartItem) { 
-        if(cartItem.qty + 1 > item.stockQty) { showToast("Max stock reached", "info"); return; } 
+        if(cartItem.qty + 1 > item.stockQty) { showToast("Available stock limit reached", "info"); return; } 
         cartItem.qty++; 
     } else {
-        cart.push({ id: item.id, name: item.name, sellPrice: item.sellPrice || 0, unitCost: item.unitCost || 0, maxStock: item.stockQty, qty: 1 }); 
+        cart.push({ id: item.id, name: item.name, sellPrice: item.sellPrice || 0, unitCost: historicalCPP, maxStock: item.stockQty, qty: 1 }); 
     }
     renderCart();
 }
@@ -1222,7 +1393,7 @@ function updateCartQty(id, change) {
         cart = cart.filter(c => c.id !== id);
     } else if(match.qty > match.maxStock) { 
         match.qty = match.maxStock; 
-        showToast("Max stock limit reached", "info"); 
+        showToast("Max available stock limit reached", "info"); 
     } 
     renderCart();
 }
@@ -1232,12 +1403,7 @@ function updateCartBadge() {
     const badgeCountEl = document.getElementById('cart-badge-count');
     const fabBadgeCountEl = document.getElementById('mobile-fab-badge-count');
 
-    let badgeText = '';
-    if (totalQty > 99) {
-        badgeText = '99+';
-    } else if (totalQty > 0) {
-        badgeText = totalQty.toString();
-    }
+    let badgeText = totalQty > 99 ? '99+' : totalQty.toString();
 
     [badgeCountEl, fabBadgeCountEl].forEach(el => {
         if (!el) return;
@@ -1262,9 +1428,9 @@ function renderSmartSuggestions() {
     
     if (cart.length === 0 || candidates.length === 0) {
         container.innerHTML = `
-            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500 text-[11px] font-medium flex items-center gap-2">
-                <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
-                Add catalog products to populate dynamic complementary recommendations.
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-darkbg/60 text-slate-400 dark:text-slate-500 text-[11px] font-medium flex items-center gap-2">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                Add items to basket to activate complementary product suggestions.
             </div>`;
         if (window.lucide) lucide.createIcons();
         return;
@@ -1275,13 +1441,13 @@ function renderSmartSuggestions() {
     
     topPicks.forEach(item => {
         container.innerHTML += `
-            <div class="suggestion-item-card flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/40 text-xs font-semibold animate-scale-in">
+            <div class="suggestion-item-card flex items-center justify-between p-2.5 rounded-2xl border border-slate-200/80 dark:border-darkborder bg-slate-50/50 dark:bg-darkbg/40 text-xs font-semibold animate-scale-in">
                 <div class="min-w-0 flex-1 pr-2">
                     <p class="text-slate-900 dark:text-slate-200 font-bold truncate">${item.name}</p>
-                    <p class="text-[10px] text-slate-400 font-medium">Available: ${item.stockQty} left • ₱ ${item.sellPrice.toFixed(2)}</p>
+                    <p class="text-[10px] text-slate-400 font-medium">Stock: ${item.stockQty} left • ₱ ${item.sellPrice.toFixed(2)}</p>
                 </div>
-                <button type="button" onclick="addToCart('${item.id}')" class="px-2.5 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold rounded-lg btn-transition flex items-center gap-1 shadow-xs flex-shrink-0">
-                    <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> Add
+                <button type="button" onclick="addToCart('${item.id}')" class="px-3 py-1 bg-brand-50 dark:bg-brand-500/10 hover:bg-brand-100 text-brand-600 dark:text-brand-400 text-[11px] font-extrabold rounded-full btn-transition flex items-center gap-1 flex-shrink-0">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add
                 </button>
             </div>
         `;
@@ -1303,13 +1469,13 @@ function renderCart() {
     } else {
         if(modeBadge) modeBadge.classList.add('hidden');
         if(actionBtn) actionBtn.innerText = "Clear";
-        if(cartTitle) cartTitle.innerText = "Current Cart";
+        if(cartTitle) cartTitle.innerText = "Checkout Basket";
     }
 
     updateCartBadge();
 
     if (cart.length === 0) {
-        container.innerHTML = `<div class="py-12 flex flex-col items-center justify-center text-slate-400 pointer-events-none"><i data-lucide="shopping-bag" class="w-12 h-12 mb-3 opacity-30"></i><p class="text-[11px] font-black uppercase tracking-wider">Cart is empty</p></div>`;
+        container.innerHTML = `<div class="py-12 flex flex-col items-center justify-center text-slate-400 pointer-events-none"><i data-lucide="shopping-bag" class="w-10 h-10 mb-2 opacity-30"></i><p class="text-[11px] font-black uppercase tracking-widest">Basket is empty</p></div>`;
         document.getElementById('cart-total-display').innerText = '0.00'; 
         document.getElementById('cart-subtotal-display').innerText = '0.00';
         document.getElementById('cart-discount-display').innerText = '0.00';
@@ -1323,24 +1489,24 @@ function renderCart() {
 
     cart.forEach(item => {
         const calcItem = cartCalc.items.find(c => c.id === item.id) || item;
-        let priceDisplay = `<span class="text-[11px] font-semibold text-slate-500">₱ ${item.sellPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
-        if (calcItem.discountedAmount > 0) priceDisplay += `<span class="ml-1.5 text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm border border-emerald-100 dark:border-emerald-800/30">- ₱ ${calcItem.discountedAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
+        let priceDisplay = `<span class="text-[11px] font-mono text-slate-500">₱ ${item.sellPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
+        if (calcItem.discountedAmount > 0) priceDisplay += `<span class="ml-1.5 text-[10px] font-mono font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">- ₱ ${calcItem.discountedAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
 
         container.innerHTML += `
-            <div class="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-600 animate-scale-in">
-                <div class="flex flex-col flex-1 min-w-0 mr-3"><span class="font-bold text-slate-900 dark:text-slate-100 truncate text-xs mb-0.5">${item.name}</span><div>${priceDisplay}</div></div>
-                <div class="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-xl border border-slate-100/50 dark:border-slate-700/50 shadow-inner">
-                    <button onclick="updateCartQty('${item.id}', -1)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all hover:shadow-sm min-h-[36px] min-w-[36px]"><i data-lucide="minus" class="w-4 h-4"></i></button>
-                    <span class="w-6 text-center font-black text-sm text-slate-900 dark:text-white">${item.qty}</span>
-                    <button onclick="updateCartQty('${item.id}', 1)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-indigo-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all hover:shadow-sm min-h-[36px] min-w-[36px]"><i data-lucide="plus" class="w-4 h-4"></i></button>
+            <div class="flex items-center justify-between bg-white dark:bg-darkcard p-3 rounded-3xl border border-slate-200/80 dark:border-darkborder shadow-xs transition-all hover:border-brand-300 dark:hover:border-brand-600 animate-scale-in">
+                <div class="flex flex-col flex-1 min-w-0 mr-2"><span class="font-bold text-slate-900 dark:text-slate-100 truncate text-xs mb-0.5">${item.name}</span><div>${priceDisplay}</div></div>
+                <div class="flex items-center gap-1 bg-slate-50 dark:bg-darkinput p-1 rounded-full border border-slate-100 dark:border-darkborder shadow-inner">
+                    <button onclick="updateCartQty('${item.id}', -1)" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all"><i data-lucide="minus" class="w-3.5 h-3.5"></i></button>
+                    <span class="w-6 text-center font-mono font-black text-xs text-slate-900 dark:text-white">${item.qty}</span>
+                    <button onclick="updateCartQty('${item.id}', 1)" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
                 </div>
             </div>
         `;
     });
 
     if (cartCalc.appliedBundles.length > 0) {
-        let bundlesHtml = cartCalc.appliedBundles.map(b => `<div class="flex justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-bold"><span><i data-lucide="tag" class="w-3 h-3 inline mr-1.5 mb-0.5"></i>${b.times}x ${b.name}</span><span>- ₱ ${b.save.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>`).join('');
-        container.innerHTML += `<div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-1.5 bg-emerald-50 dark:bg-emerald-500/10 p-3.5 rounded-2xl border border-emerald-100 dark:border-emerald-800/30 shadow-inner"><div class="text-[9px] uppercase font-black text-emerald-800 dark:text-emerald-300 mb-2 tracking-wider">Applied Promos</div>${bundlesHtml}</div>`;
+        let bundlesHtml = cartCalc.appliedBundles.map(b => `<div class="flex justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-bold font-mono"><span><i data-lucide="tag" class="w-3 h-3 inline mr-1 mb-0.5"></i>${b.times}x ${b.name}</span><span>- ₱ ${b.save.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>`).join('');
+        container.innerHTML += `<div class="mt-3 pt-2.5 border-t border-slate-200 dark:border-darkborder space-y-1 bg-emerald-50/70 dark:bg-emerald-500/10 p-3.5 rounded-3xl"><div class="text-[9px] uppercase font-black text-emerald-800 dark:text-emerald-300 tracking-wider">Applied Promotions</div>${bundlesHtml}</div>`;
     }
     
     const formattedTotalStr = cartCalc.total.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1355,15 +1521,15 @@ function renderCart() {
     initIcons();
 }
 
-// ================= TRANSACTION POST & HISTORY LOGIC =================
+// ================= TRANSACTION ORDER & LEDGER ENGINE =================
 function setOrderTab(tab) {
     currentOrderTab = tab;
     document.querySelectorAll('[id^="tab-"]').forEach(btn => {
-        btn.className = "flex-1 md:flex-none px-3 py-1.5 text-[10px] font-semibold rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all duration-200 whitespace-nowrap";
+        btn.className = "flex-1 md:flex-none px-3.5 py-1 text-[10px] font-bold rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all whitespace-nowrap";
     });
     const activeBtn = document.getElementById(`tab-${tab}-orders`);
     if (activeBtn) {
-        activeBtn.className = "flex-1 md:flex-none px-3 py-1.5 text-[10px] font-semibold rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs hover:text-slate-900 transition-all duration-200 whitespace-nowrap";
+        activeBtn.className = "flex-1 md:flex-none px-3.5 py-1 text-[10px] font-bold rounded-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition-all whitespace-nowrap";
     }
     currentOrdersPage = 1;
     renderOrdersTable();
@@ -1410,7 +1576,9 @@ function getFilteredOrders() {
         case 'completed':
             filtered = filtered.filter(o => o.status !== 'cancelled' && o.isPaid);
             break;
+        case 'all':
         default:
+            filtered = filtered.filter(o => o.status !== 'cancelled');
             break;
     }
 
@@ -1425,7 +1593,6 @@ function getFilteredOrders() {
     }
 
     filtered.sort((a, b) => {
-        // If user defined explicit multi-column sorting stack
         if (orderSortStack.length > 0) {
             for (let sortObj of orderSortStack) {
                 const { col, dir } = sortObj;
@@ -1443,11 +1610,6 @@ function getFilteredOrders() {
             return 0;
         }
 
-        // DEFAULT ORDERING:
-        // 1. Unpaid orders first
-        // 2. Most recent transaction first within section
-        // 3. Then all paid transactions
-        // 4. Most recent first within each section
         const aUnpaid = (!a.isPaid && a.status !== 'cancelled') ? 0 : 1;
         const bUnpaid = (!b.isPaid && b.status !== 'cancelled') ? 0 : 1;
 
@@ -1455,7 +1617,6 @@ function getFilteredOrders() {
             return aUnpaid - bUnpaid;
         }
 
-        // Within same payment status group, sort by most recent transaction first
         const dateA = new Date(a.date || 0).getTime();
         const dateB = new Date(b.date || 0).getTime();
         if (dateA !== dateB) {
@@ -1496,28 +1657,24 @@ function toggleOrderReceived(orderId) {
     } 
 }
 
-/**
- * POS Order Editing Bug Fix
- * Opening an order for editing populates fields without modifying stock quantities.
- */
 function editOrder(id) {
     const order = orders.find(o => o.id === id); 
     if (!order || order.status === 'cancelled') return;
     
     if (editingOrderId) {
-        if (!confirm("An editing session is already active. Discard those changes and open this ticket?")) return;
+        if (!confirm("An editing session is active. Discard changes and open this ticket?")) return;
     }
 
     editingOrderId = order.id;
 
-    // Load existing order items into active cart for display/editing
     cart = getOrderItems(order).map(item => {
         const invItem = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+        const historicalCPP = invItem ? getProductHistoricalCPP(invItem.name, invItem.unitCost) : item.unitCost;
         return {
             id: invItem ? invItem.id : item.id,
             name: item.name,
             sellPrice: item.sellPrice,
-            unitCost: item.unitCost,
+            unitCost: historicalCPP,
             maxStock: invItem ? (invItem.stockQty + item.qty) : item.qty,
             qty: item.qty
         };
@@ -1530,23 +1687,23 @@ function editOrder(id) {
     if (pFullCheck) pFullCheck.checked = order.isPaid;
     if (pAmtInput) {
         pAmtInput.disabled = order.isPaid;
-        if (order.isPaid) pAmtInput.classList.add('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
-        else pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+        if (order.isPaid) pAmtInput.classList.add('opacity-50', 'bg-slate-100', 'dark:bg-slate-800');
+        else pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-800');
         pAmtInput.value = (order.amountPaid !== undefined) ? order.amountPaid : '';
     }
 
     renderCart();
     switchTab('orders');
     openCartModal();
-    showToast(`Loaded order ${order.id} for editing`, "info");
+    showToast(`Loaded ticket ${order.id} for modification`, "info");
 }
 
 function cancelOrder(id) {
     const order = orders.find(o => o.id === id);
     if (order && order.status !== 'cancelled') {
         requestUserConfirmation(
-            "Void Transaction Order",
-            `Cancel transaction ticket for ${order.customerName}?\nThis rolls back all item quantities back to active warehouse inventory.`,
+            "Void Sales Ticket",
+            `Void transaction ticket for ${order.customerName}? Stock quantities will be automatically returned to active warehouse inventory.`,
             "Proceed",
             () => {
                 getOrderItems(order).forEach(item => {
@@ -1565,8 +1722,8 @@ function cancelOrder(id) {
 
 function deleteOrderPermanently(id) {
     requestUserConfirmation(
-        "Delete Order",
-        "Permanently purge this order from the registry database? This cannot be undone.",
+        "Purge Order Log",
+        "Permanently purge this order from the database? This action cannot be undone.",
         "Delete",
         () => {
             orders = orders.filter(o => o.id !== id);
@@ -1584,59 +1741,59 @@ function renderOrdersTable() {
     document.getElementById('pagination-info-text').innerText = `Showing page ${currentOrdersPage} of ${totalPages} (${filtered.length} total)`;
     const pageSlicedOrders = filtered.slice((currentOrdersPage - 1) * ordersPerPage, ((currentOrdersPage - 1) * ordersPerPage) + ordersPerPage);
 
-    if(pageSlicedOrders.length === 0) { list.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400"><div class="flex flex-col items-center justify-center"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm font-bold">No records found.</p></div></td></tr>`; initIcons(); return; }
+    if(pageSlicedOrders.length === 0) { list.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400"><div class="flex flex-col items-center justify-center"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs font-bold">No order records found.</p></div></td></tr>`; initIcons(); return; }
     
     pageSlicedOrders.forEach(order => {
         const due = order.totalRevenue - (order.amountPaid || 0); const isCancelled = order.status === 'cancelled';
         
-        let pBadge = isCancelled ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg uppercase tracking-wider"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Void</span>`
-            : (order.isPaid ? `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800/30 uppercase tracking-wider hover:bg-emerald-100"><i data-lucide="check" class="w-3 h-3"></i> Paid</button>`
-                : ((order.amountPaid || 0) > 0 ? `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-200 dark:border-amber-800/30 uppercase tracking-wider hover:bg-emerald-100"><i data-lucide="clock" class="w-3 h-3"></i> Bal: ₱ ${due.toFixed(2)}</button>`
-                    : `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-800/30 uppercase tracking-wider hover:bg-rose-100"><i data-lucide="alert-circle" class="w-3 h-3"></i> Unpaid</button>`));
+        let pBadge = isCancelled ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full uppercase tracking-wider whitespace-nowrap"><i data-lucide="x-circle" class="w-3 h-3"></i> Void</span>`
+            : (order.isPaid ? `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-800/30 uppercase tracking-wider whitespace-nowrap hover:bg-emerald-100"><i data-lucide="check" class="w-3 h-3"></i> Paid</button>`
+                : ((order.amountPaid || 0) > 0 ? `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-800/30 uppercase tracking-wider whitespace-nowrap"><i data-lucide="clock" class="w-3 h-3"></i> Bal: ₱ ${due.toFixed(2)}</button>`
+                    : `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full border border-rose-200 dark:border-rose-800/30 uppercase tracking-wider whitespace-nowrap"><i data-lucide="alert-circle" class="w-3 h-3"></i> Unpaid</button>`));
         
-        const delBtn = isCancelled ? `<span class="text-slate-400 font-bold text-xl">-</span>` 
-            : (order.isReceived ? `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200/70 hover:bg-slate-200 uppercase tracking-wider"><i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-500"></i> Delivered</button>`
-                : `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black bg-white dark:bg-slate-900 text-slate-500 rounded-lg border border-slate-200/70 shadow-sm hover:bg-slate-50 uppercase tracking-wider"><i data-lucide="truck" class="w-3.5 h-3.5 text-amber-500"></i> Pending</button>`);
+        const delBtn = isCancelled ? `<span class="text-slate-400 font-bold">-</span>` 
+            : (order.isReceived ? `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700 uppercase tracking-wider whitespace-nowrap"><i data-lucide="package-check" class="w-3 h-3 text-emerald-500"></i> Delivered</button>`
+                : `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-white dark:bg-darkcard text-slate-500 rounded-full border border-slate-200 dark:border-darkborder uppercase tracking-wider whitespace-nowrap shadow-xs"><i data-lucide="truck" class="w-3 h-3 text-amber-500"></i> Pending</button>`);
 
-        const editBadge = order.isEdited && !isCancelled ? `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 align-middle">Edited</span>` : '';
+        const editBadge = order.isEdited && !isCancelled ? `<span class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 align-middle">Edited</span>` : '';
         const itemsListStr = getOrderItems(order).map(i => `${i.qty}x ${i.name}`).join(', ');
 
-        let actionHtml = `<button onclick="event.stopPropagation(); generateReceipt('${order.id}')" title="Receipt" class="p-2 sm:p-2.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
+        let actionHtml = `<button onclick="event.stopPropagation(); generateReceipt('${order.id}')" title="Receipt" class="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-full transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
         
         if(!isCancelled) {
-            actionHtml += `<button onclick="event.stopPropagation(); editOrder('${order.id}')" title="Edit Order" class="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); cancelOrder('${order.id}')" title="Cancel Order" class="p-2 sm:p-2.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
+            actionHtml += `<button onclick="event.stopPropagation(); editOrder('${order.id}')" title="Edit Order" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); cancelOrder('${order.id}')" title="Cancel Order" class="p-2 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-full transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
         }
 
         if (isCancelled) {
-            actionHtml += `<button onclick="event.stopPropagation(); deleteOrderPermanently('${order.id}')" title="Delete Permanently" class="p-2 sm:p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            actionHtml += `<button onclick="event.stopPropagation(); deleteOrderPermanently('${order.id}')" title="Delete Permanently" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-full transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
         }
 
         const row = document.createElement('tr');
-        row.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer " + (isCancelled ? 'opacity-50 grayscale bg-slate-50/30 dark:bg-slate-900/20' : '');
+        row.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer " + (isCancelled ? 'opacity-50 grayscale bg-slate-50/30 dark:bg-darkbg/20' : '');
         
         row.onclick = () => { generateReceipt(order.id); };
 
         row.innerHTML = `
-            <td class="w-[20%] py-3 px-4 sm:px-5 truncate-cell">
-                <div class="font-bold text-sm text-slate-900 dark:text-white truncate" title="${order.customerName}">${order.customerName}${editBadge}</div>
+            <td class="py-3 px-4 sm:px-5 truncate-cell">
+                <div class="font-bold text-xs text-slate-900 dark:text-white truncate" title="${order.customerName}">${order.customerName}${editBadge}</div>
             </td>
-            <td class="w-[15%] py-3 px-3 sm:px-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <td class="py-3 px-3 sm:px-4 text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 ${order.date || "N/A"}
             </td>
-            <td class="w-[25%] py-3 px-3 sm:px-4 text-xs font-medium text-slate-600 dark:text-slate-300 truncate-cell" title="${itemsListStr}">
+            <td class="py-3 px-3 sm:px-4 text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate-cell max-w-[180px]" title="${itemsListStr}">
                 ${itemsListStr}
             </td>
-            <td class="w-[13%] py-3 px-3 sm:px-4 text-right font-black text-indigo-600 dark:text-indigo-400 tracking-tight ${isCancelled?'line-through':''}">
+            <td class="py-3 px-3 sm:px-4 text-right font-mono font-black text-brand-600 dark:text-brand-400 tracking-tight whitespace-nowrap ${isCancelled?'line-through':''}">
                 ₱ ${order.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2})}
             </td>
-            <td class="w-[12%] py-3 px-3 sm:px-4 text-center action-prevent-trigger">
+            <td class="py-3 px-3 sm:px-4 text-center action-prevent-trigger whitespace-nowrap">
                 ${pBadge}
             </td>
-            <td class="w-[12%] py-3 px-3 sm:px-4 text-center action-prevent-trigger">
+            <td class="py-3 px-3 sm:px-4 text-center action-prevent-trigger whitespace-nowrap">
                 ${delBtn}
             </td>
-            <td class="w-[8%] py-3 px-4 sm:px-5 text-right action-prevent-trigger">
-                <div class="flex items-center justify-end gap-1 sm:gap-1.5">
+            <td class="py-3 px-4 sm:px-5 text-right action-prevent-trigger whitespace-nowrap">
+                <div class="inline-flex items-center justify-end gap-1 flex-nowrap">
                     ${actionHtml}
                 </div>
             </td>
@@ -1645,13 +1802,13 @@ function renderOrdersTable() {
     }); initIcons();
 }
 
-// ================= CHECKOUT & CLEAR CART =================
+// ================= CHECKOUT & BASKET CLEARING LOGIC =================
 function clearCart() {
     if (cart.length === 0) {
-        showToast("Cart is already empty", "info");
+        showToast("Basket is already empty", "info");
         return;
     }
-    requestUserConfirmation("Clear Cart", "This will remove all items from your current cart. Are you sure?", "Clear", () => {
+    requestUserConfirmation("Clear Basket", "This will remove all line items from your current cart. Continue?", "Clear", () => {
         if (editingOrderId) {
             editingOrderId = null;
             const modeBadge = document.getElementById('cart-mode-badge');
@@ -1659,68 +1816,95 @@ function clearCart() {
             const cartTitle = document.getElementById('cart-title');
             if (modeBadge) modeBadge.classList.add('hidden');
             if (actionBtn) actionBtn.innerText = "Clear";
-            if (cartTitle) cartTitle.innerText = "Current Cart";
+            if (cartTitle) cartTitle.innerText = "Checkout Basket";
             document.getElementById('pos-customer').value = '';
             const pAmtInput = document.getElementById('pos-paid-amount');
             const pFullCheck = document.getElementById('pos-paid-full');
             if (pFullCheck) pFullCheck.checked = false;
             if (pAmtInput) {
                 pAmtInput.disabled = false;
-                pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+                pAmtInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-800');
                 pAmtInput.value = '';
             }
         }
         cart = [];
         renderCart();
         closeCartModal();
-        showToast("Cart cleared", "info");
+        showToast("Basket cleared", "info");
     });
 }
 
-/**
- * POS Order Editing Bug Fix (Idempotent Checkout)
- * When editing an existing order, update existing transaction in place.
- * Editing an order must NOT modify inventory stock quantities.
- */
 function checkoutCart() {
-    if (cart.length === 0) { showToast("Cart is empty", "error"); return; }
+    if (cart.length === 0) { showToast("Basket is empty", "error"); return; }
     const customerName = document.getElementById('pos-customer').value.trim() || "Walk-in Customer";
     const paidAmount = parseFloat(document.getElementById('pos-paid-amount').value) || 0;
     const cartCalc = calculateCart();
     const totalDue = cartCalc.total;
 
-    if (paidAmount > totalDue) { showToast("Payment exceeds total due", "error"); return; }
+    if (paidAmount > totalDue) { showToast("Payment exceeds total due amount", "error"); return; }
 
-    const orderItems = cart.map(item => ({
-        id: item.id,
-        name: item.name,
-        qty: item.qty,
-        sellPrice: item.sellPrice,
-        unitCost: item.unitCost,
-        effectiveTotal: item.qty * item.sellPrice,
-        totalCost: item.qty * (item.unitCost || 0),
-        totalProfit: item.qty * ((item.sellPrice || 0) - (item.unitCost || 0))
-    }));
+    const newOrderItems = cart.map(item => {
+        const historicalCPP = getProductHistoricalCPP(item.name, item.unitCost);
+        return {
+            id: item.id,
+            name: item.name,
+            qty: item.qty,
+            sellPrice: item.sellPrice,
+            unitCost: historicalCPP,
+            effectiveTotal: item.qty * item.sellPrice,
+            totalCost: item.qty * historicalCPP,
+            totalProfit: item.qty * ((item.sellPrice || 0) - historicalCPP)
+        };
+    });
 
     const totalRevenue = cartCalc.total;
-    const totalCost = orderItems.reduce((sum, i) => sum + i.totalCost, 0);
+    const totalCost = newOrderItems.reduce((sum, i) => sum + i.totalCost, 0);
     const totalProfit = totalRevenue - totalCost;
 
     if (editingOrderId) {
-        // UPDATE EXISTING ORDER IN-PLACE
         const existingOrderIndex = orders.findIndex(o => o.id === editingOrderId);
         if (existingOrderIndex > -1) {
+            const oldOrder = orders[existingOrderIndex];
+            const oldItems = getOrderItems(oldOrder);
+
+            const oldQtyMap = {};
+            oldItems.forEach(i => {
+                const key = i.name.toLowerCase();
+                oldQtyMap[key] = (oldQtyMap[key] || 0) + i.qty;
+            });
+
+            const newQtyMap = {};
+            newOrderItems.forEach(i => {
+                const key = i.name.toLowerCase();
+                newQtyMap[key] = (newQtyMap[key] || 0) + i.qty;
+            });
+
+            const allKeys = new Set([...Object.keys(oldQtyMap), ...Object.keys(newQtyMap)]);
+            allKeys.forEach(prodNameKey => {
+                const oldQ = oldQtyMap[prodNameKey] || 0;
+                const newQ = newQtyMap[prodNameKey] || 0;
+                const delta = newQ - oldQ;
+
+                if (delta !== 0) {
+                    const invItem = inventory.find(inv => inv.name.toLowerCase() === prodNameKey);
+                    if (invItem) {
+                        invItem.stockQty -= delta;
+                    }
+                }
+            });
+
             orders[existingOrderIndex].customerName = customerName;
             orders[existingOrderIndex].amountPaid = paidAmount;
             orders[existingOrderIndex].isPaid = paidAmount >= totalDue;
-            orders[existingOrderIndex].items = orderItems;
+            orders[existingOrderIndex].items = newOrderItems;
             orders[existingOrderIndex].totalRevenue = totalRevenue;
             orders[existingOrderIndex].totalCost = totalCost;
             orders[existingOrderIndex].totalProfit = totalProfit;
             orders[existingOrderIndex].isEdited = true;
-            
+
             saveOrders();
-            logActivity('sale', `Updated order ${editingOrderId} for ${customerName}`);
+            saveInventory();
+            logActivity('sale', `Updated ticket ${editingOrderId} for ${customerName}`);
             showToast(`Order ${editingOrderId} updated successfully!`, "success");
             generateReceipt(editingOrderId);
             editingOrderId = null;
@@ -1729,7 +1913,6 @@ function checkoutCart() {
             return;
         }
     } else {
-        // CREATE NEW ORDER - Stock decreases ONLY when creating a new order
         cart.forEach(item => {
             const invItem = inventory.find(i => i.id === item.id);
             if (invItem) {
@@ -1741,7 +1924,7 @@ function checkoutCart() {
             id: 'ORD-' + Date.now().toString().slice(-6),
             customerName: customerName,
             date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            items: orderItems,
+            items: newOrderItems,
             totalRevenue: totalRevenue,
             totalCost: totalCost,
             totalProfit: totalProfit,
@@ -1771,7 +1954,7 @@ function checkoutCart() {
     const cartTitle = document.getElementById('cart-title');
     if (modeBadge) modeBadge.classList.add('hidden');
     if (actionBtn) actionBtn.innerText = "Clear";
-    if (cartTitle) cartTitle.innerText = "Current Cart";
+    if (cartTitle) cartTitle.innerText = "Checkout Basket";
 
     saveActivityLog();
     renderCart();
@@ -1780,17 +1963,17 @@ function checkoutCart() {
 }
 
 function togglePaidFullCheck(checkbox) {
-    const total = parseFloat(document.getElementById('cart-total-display').innerText) || 0;
+    const total = parseFloat(document.getElementById('cart-total-display').innerText.replace(/,/g, '')) || 0;
     const paidInput = document.getElementById('pos-paid-amount');
     if (!paidInput) return;
     if (checkbox.checked) {
         paidInput.value = total.toFixed(2);
         paidInput.disabled = true;
-        paidInput.classList.add('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+        paidInput.classList.add('opacity-50', 'bg-slate-100', 'dark:bg-slate-800');
     } else {
         paidInput.value = '';
         paidInput.disabled = false;
-        paidInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-700');
+        paidInput.classList.remove('opacity-50', 'bg-slate-100', 'dark:bg-slate-800');
     }
 }
 
@@ -1805,7 +1988,7 @@ function filterCustomers() {
     if (matches.length > 0 && query.length > 0) {
         matches.forEach(c => {
             const div = document.createElement('div');
-            div.className = "px-4 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors";
+            div.className = "px-4 py-2.5 hover:bg-brand-50 dark:hover:bg-brand-950/40 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors";
             div.innerText = c;
             div.onmousedown = () => {
                 input.value = c;
@@ -1821,12 +2004,35 @@ function filterCustomers() {
     }
 }
 
-// ================= SUPPLIER MODULE =================
+// ================= SUPPLIER PROCUREMENT & AP LEDGER =================
 function toggleBnplSort(column, event) {
     const isShift = event && event.shiftKey;
     handleMultiColumnSortToggle(bnplSortStack, column, isShift);
     updateSortHeaderIcons('sort-icon-bnpl', bnplSortStack, ['supplier', 'date', 'product', 'financials', 'status']);
     renderBnplTable();
+}
+
+function changeBnplRowsPerPage() {
+    const sel = document.getElementById('bnpl-rows-per-page-select');
+    if (sel) bnplRowsPerPage = parseInt(sel.value) || 10;
+    bnplCurrentPage = 1;
+    renderBnplTable();
+}
+
+function prevBnplPage() {
+    if (bnplCurrentPage > 1) {
+        bnplCurrentPage--;
+        renderBnplTable();
+    }
+}
+
+function nextBnplPage() {
+    const filtered = getSortedBnplRecords();
+    const maxPage = Math.ceil(filtered.length / bnplRowsPerPage) || 1;
+    if (bnplCurrentPage < maxPage) {
+        bnplCurrentPage++;
+        renderBnplTable();
+    }
 }
 
 function filterSuppliers() {
@@ -1842,7 +2048,7 @@ function filterSuppliers() {
     if (matches.length > 0) {
         matches.forEach(s => {
             const block = document.createElement('div');
-            block.className = "px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors";
+            block.className = "px-4 py-2.5 hover:bg-brand-50 dark:hover:bg-brand-950/40 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors";
             block.innerText = s;
             block.onmousedown = () => {
                 input.value = s;
@@ -1859,7 +2065,7 @@ function filterSuppliers() {
 }
 
 function createNewBatchPrompt() {
-    const batchName = prompt("Enter custom batch name/identifier:");
+    const batchName = prompt("Enter custom batch identifier:");
     if (batchName && batchName.trim()) {
         const select = document.getElementById('bnpl-batch-number');
         const opt = document.createElement('option');
@@ -1867,7 +2073,7 @@ function createNewBatchPrompt() {
         opt.innerText = batchName.trim();
         opt.selected = true;
         select.appendChild(opt);
-        showToast("Custom batch identifier created", "success");
+        showToast("Custom batch reference created", "success");
     }
 }
 
@@ -1883,8 +2089,8 @@ function searchBatchItem() {
     if(matches.length > 0) {
         matches.forEach(item => {
             const row = document.createElement('div');
-            row.className = "px-4 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 flex justify-between";
-            row.innerHTML = `<span>${item.name}</span><span class="text-[10px] text-slate-400 font-bold">Price: ₱ ${(item.sellPrice || 0).toFixed(2)}</span>`;
+            row.className = "px-4 py-2.5 hover:bg-brand-50 dark:hover:bg-brand-950/40 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 flex justify-between";
+            row.innerHTML = `<span>${item.name}</span><span class="text-[10px] font-mono text-slate-400">Price: ₱ ${(item.sellPrice || 0).toFixed(2)}</span>`;
             row.onmousedown = () => { 
                 input.value = item.name; 
                 dropdown.classList.add('hidden'); 
@@ -1952,15 +2158,7 @@ function commitBatchItemsToInventory(items) {
 
         if(existingIndex > -1) {
             const existing = inventory[existingIndex];
-            const currentStock = existing.stockQty || 0;
-            const currentCPP = existing.unitCost || 0;
-            
-            const existingTotalValue = currentStock * currentCPP;
-            const newTotalValue = existingTotalValue + itemCost;
-            const combinedStockCount = currentStock + addedQty;
-            
-            existing.unitCost = combinedStockCount > 0 ? (newTotalValue / combinedStockCount) : item.costPerPiece;
-            existing.stockQty = combinedStockCount;
+            existing.stockQty = (existing.stockQty || 0) + addedQty;
         } else {
             inventory.push({
                 id: Date.now().toString() + Math.random().toString(36).substr(2, 3),
@@ -1973,6 +2171,7 @@ function commitBatchItemsToInventory(items) {
             });
         }
     });
+    syncInventoryCPP();
     saveInventory();
     saveStockHistory();
 }
@@ -2034,7 +2233,10 @@ function handleSupplierPurchaseSubmit(e) {
     if (previewBlock) previewBlock.classList.add('hidden');
     initDateDefaults();
     
+    syncInventoryCPP();
+    saveInventory();
     renderBnplUI();
+    renderInventoryTable();
     showToast("Supplier purchase logged successfully", "success");
 }
 
@@ -2066,11 +2268,15 @@ function saveSupplierPurchaseEdit(e) {
 
         saveBnpl();
         closeModal('supplier-purchase-edit-modal');
+        syncInventoryCPP();
+        saveInventory();
         renderBnplUI();
+        renderInventoryTable();
         showToast("Supplier purchase modified", "success");
     }
 }
 
+// PERMANENT BNPL DELETION + FIREBASE PURGE + DYNAMIC CPP RE-CALCULATION
 function deleteSupplierPurchase(id) {
     const record = bnplRecords.find(b => b.id === id);
     if (!record) return;
@@ -2078,38 +2284,45 @@ function deleteSupplierPurchase(id) {
     const proceedDeletion = () => {
         if (record.isReceived) {
             record.items.forEach(item => {
-                const matchedItem = inventory.find(i => i.name.toLowerCase() === item.itemName.toLowerCase());
+                const matchedItem = inventory.find(i => i.name.toLowerCase().trim() === item.itemName.toLowerCase().trim());
                 if (matchedItem) {
                     const currentStock = matchedItem.stockQty || 0;
-                    const currentCPP = matchedItem.unitCost || 0;
-                    
-                    const originalValue = currentStock * currentCPP;
-                    const removedValue = item.totalCost;
-                    const balancedStockCount = Math.max(0, currentStock - item.qty);
-                    
-                    matchedItem.unitCost = balancedStockCount > 0 ? (Math.max(0, originalValue - removedValue) / balancedStockCount) : 0;
-                    matchedItem.stockQty = balancedStockCount;
+                    matchedItem.stockQty = Math.max(0, currentStock - item.qty);
                 }
             });
-            saveInventory();
         }
+        
+        // 1. Remove record permanently from active memory
         bnplRecords = bnplRecords.filter(b => b.id !== id);
+        
+        // 2. Persist deletion in Firebase Realtime Database
         saveBnpl();
+        
+        // 3. Recalculate lifetime Average CPP dynamically without the deleted row
+        syncInventoryCPP();
+        
+        // 4. Save updated inventory CPP & stock counts to Firebase
+        saveInventory();
+        
+        // 5. Update UI view
         renderBnplUI();
-        showToast("Supplier purchase record successfully deleted", "info");
+        renderInventoryTable();
+        renderSummary();
+        
+        showToast("BNPL purchase deleted. Average CPP recalculated.", "info");
     };
 
     if (record.isReceived) {
         requestUserConfirmation(
             "Delete Supplier Purchase", 
-            "This supplier purchase has already added inventory. Deleting it will also remove the inventory added by this purchase. Do you want to continue?", 
+            "This supplier purchase added inventory. Deleting it will purge it from Firebase, adjust stock levels, and recalculate Average CPP. Continue?", 
             "Delete", 
             proceedDeletion
         );
     } else {
         requestUserConfirmation(
             "Delete Supplier Purchase", 
-            "Are you sure you want to delete this pending supplier purchase?", 
+            "Permanently purge this BNPL record from the database?", 
             "Delete", 
             proceedDeletion
         );
@@ -2159,7 +2372,7 @@ function saveApPayment(e) {
         saveBnpl();
         closeModal('ap-payment-modal');
         renderBnplUI();
-        showToast("AP payment successfully updated", "success");
+        showToast("AP payment entry recorded successfully", "success");
     }
 }
 
@@ -2181,9 +2394,9 @@ function viewPaymentHistory(id) {
     } else {
         payments.forEach(p => {
             container.innerHTML += `
-                <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
-                    <span class="text-slate-500 font-medium">${p.date}</span>
-                    <span class="font-black text-emerald-600 dark:text-emerald-400">₱ ${p.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                <div class="flex justify-between items-center bg-slate-50 dark:bg-darkinput/60 p-2.5 rounded-2xl border border-slate-200 dark:border-darkborder text-xs">
+                    <span class="text-slate-500 dark:text-slate-400 font-semibold">${p.date}</span>
+                    <span class="font-mono font-black text-emerald-600 dark:text-emerald-400">₱ ${p.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                 </div>
             `;
         });
@@ -2199,19 +2412,23 @@ function receiveSupplierStockBatch(id) {
     bill.isReceived = true;
     bill.receivedDate = new Date().toISOString();
     saveBnpl();
+    syncInventoryCPP();
+    saveInventory();
     renderBnplUI();
-    showToast("Active inventory updated", "success");
+    renderInventoryTable();
+    showToast("Active inventory stock and Average CPP updated", "success");
 }
 
 function setBnplHistoryFilter(f) {
     currentApFilter = f;
     document.querySelectorAll('[data-ap-btn]').forEach(btn => {
         if(btn.dataset.apBtn === f) {
-            btn.className = "flex-1 sm:flex-none px-2.5 py-1.5 rounded bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white uppercase tracking-wider font-bold";
+            btn.className = "px-3 py-1 rounded-full bg-white dark:bg-slate-800 shadow-xs text-slate-900 dark:text-white uppercase tracking-wider font-extrabold";
         } else {
-            btn.className = "flex-1 sm:flex-none px-2.5 py-1.5 rounded text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 uppercase tracking-wider font-bold";
+            btn.className = "px-3 py-1 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-800 uppercase tracking-wider font-extrabold";
         }
     });
+    bnplCurrentPage = 1;
     renderBnplTable();
 }
 
@@ -2221,15 +2438,23 @@ function getSortedBnplRecords() {
     else if(currentApFilter === 'partial') filtered = filtered.filter(b => b.status === 'partially_paid');
     else if(currentApFilter === 'paid') filtered = filtered.filter(b => b.status === 'fully_paid');
 
+    const searchVal = (document.getElementById('bnpl-search')?.value || '').trim().toLowerCase();
+    if (searchVal) {
+        filtered = filtered.filter(b => {
+            const supplierMatch = b.supplierName.toLowerCase().includes(searchVal);
+            const invoiceMatch = (b.invoiceNumber || '').toLowerCase().includes(searchVal);
+            const itemsMatch = b.items.some(i => i.itemName.toLowerCase().includes(searchVal));
+            return supplierMatch || invoiceMatch || itemsMatch;
+        });
+    }
+
     filtered.sort((a, b) => {
-        // DEFAULT BEHAVIOR: Unpaid supplier purchases always appear first
         const aUnpaid = a.status !== 'fully_paid' ? 0 : 1;
         const bUnpaid = b.status !== 'fully_paid' ? 0 : 1;
         if (aUnpaid !== bUnpaid) {
             return aUnpaid - bUnpaid;
         }
 
-        // Apply multi-column sorting within unpaid / paid sections
         if (bnplSortStack.length > 0) {
             for (let sortObj of bnplSortStack) {
                 const { col, dir } = sortObj;
@@ -2250,7 +2475,6 @@ function getSortedBnplRecords() {
             }
         }
 
-        // Default secondary sort: newest first
         return new Date(b.purchaseDate || 0) - new Date(a.purchaseDate || 0);
     });
 
@@ -2262,63 +2486,70 @@ function renderBnplTable() {
     if(!list) return; list.innerHTML = '';
 
     const filtered = getSortedBnplRecords();
+    const totalPages = Math.ceil(filtered.length / bnplRowsPerPage) || 1;
+    if (bnplCurrentPage > totalPages) bnplCurrentPage = totalPages;
 
-    if(filtered.length === 0) {
-        list.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="truck" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>No supplier purchases recorded.</td></tr>`;
+    const infoText = document.getElementById('bnpl-pagination-info-text');
+    if (infoText) infoText.innerText = `Showing page ${bnplCurrentPage} of ${totalPages} (${filtered.length} total)`;
+
+    const pageSlicedRecords = filtered.slice((bnplCurrentPage - 1) * bnplRowsPerPage, bnplCurrentPage * bnplRowsPerPage);
+
+    if(pageSlicedRecords.length === 0) {
+        list.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400 font-bold"><i data-lucide="truck" class="w-10 h-10 mx-auto mb-2 opacity-30"></i>No supplier purchases recorded.</td></tr>`;
         initIcons(); return;
     }
 
-    filtered.forEach(b => {
+    pageSlicedRecords.forEach(b => {
         let statusLabel = '';
-        if(b.status === 'fully_paid') statusLabel = `<span class="inline-block bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 px-2 py-0.5 rounded text-[10px] font-black uppercase">Fully Paid</span>`;
-        else if(b.status === 'partially_paid') statusLabel = `<span class="inline-block bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 px-2 py-0.5 rounded text-[10px] font-black uppercase">Partial</span>`;
-        else statusLabel = `<span class="inline-block bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-400 px-2 py-0.5 rounded text-[10px] font-black uppercase">Unpaid</span>`;
+        if(b.status === 'fully_paid') statusLabel = `<span class="inline-block bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase">Fully Paid</span>`;
+        else if(b.status === 'partially_paid') statusLabel = `<span class="inline-block bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase">Partial</span>`;
+        else statusLabel = `<span class="inline-block bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-400 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase">Unpaid</span>`;
 
         const unpaidBal = b.totalAmount - (b.amountPaid || 0);
         const dueDateStr = b.dueDate || 'N/A';
 
         const itemsStr = b.items.map(item => `
-            <div class="text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                • ${item.qty}x ${item.itemName} <span class="text-slate-400 text-[10px]">(₱ ${item.costPerPiece.toFixed(2)}/pc)</span>
+            <div class="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                • ${item.qty}x ${item.itemName} <span class="text-slate-400 text-[10px] font-mono">(₱ ${item.costPerPiece.toFixed(2)}/pc)</span>
             </div>
         `).join('');
 
         let receivedAction = '';
         if(b.isReceived) {
             const rDate = b.receivedDate ? new Date(b.receivedDate).toLocaleDateString() : '';
-            receivedAction = `<div class="flex flex-col items-center"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-lg"><i data-lucide="package-check" class="w-3 h-3"></i> Stocks Loaded</span><span class="text-[9px] text-slate-400 mt-0.5">${rDate}</span></div>`;
+            receivedAction = `<div class="flex flex-col items-center"><span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-full"><i data-lucide="package-check" class="w-3 h-3"></i> Loaded</span><span class="text-[9px] text-slate-400 mt-0.5">${rDate}</span></div>`;
         } else {
-            receivedAction = `<button onclick="receiveSupplierStockBatch('${b.id}')" title="Load Quantities to Inventory" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase rounded-lg transition-colors border border-indigo-100 dark:border-indigo-800/30 btn-transition flex items-center gap-1"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Receive Stocks</button>`;
+            receivedAction = `<button onclick="receiveSupplierStockBatch('${b.id}')" title="Load Quantities to Active Inventory" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 text-[9px] font-black uppercase rounded-full border border-brand-100 dark:border-brand-800/30 btn-transition flex items-center gap-1"><i data-lucide="download-cloud" class="w-3 h-3"></i> Receive</button>`;
         }
 
         list.innerHTML += `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                <td class="py-3 px-4">
-                    <div class="font-black text-slate-900 dark:text-white text-xs">${b.supplierName}</div>
-                    <div class="text-[10px] font-bold text-slate-400 mt-0.5">Batch: ${b.invoiceNumber || 'N/A'}</div>
+                <td class="py-3.5 px-4">
+                    <div class="font-extrabold text-slate-900 dark:text-white text-xs">${b.supplierName}</div>
+                    <div class="text-[10px] font-mono font-bold text-slate-400 mt-0.5">Batch: ${b.invoiceNumber || 'N/A'}</div>
                 </td>
-                <td class="py-3 px-3 text-xs">
-                    <div class="text-slate-500">Pur: ${b.purchaseDate}</div>
+                <td class="py-3.5 px-3 text-xs">
+                    <div class="text-slate-500 dark:text-slate-400 font-medium">Pur: ${b.purchaseDate}</div>
                     <div class="text-rose-500 font-semibold mt-0.5">Due: ${dueDateStr}</div>
                 </td>
-                <td class="py-3 px-3 min-w-[150px]">${itemsStr}</td>
-                <td class="py-3 px-3 text-right">
+                <td class="py-3.5 px-3 min-w-[150px]">${itemsStr}</td>
+                <td class="py-3.5 px-3 text-right font-mono">
                     <div class="font-black text-slate-800 dark:text-white">Total: ₱ ${b.totalAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                    <div class="text-[10px] text-emerald-600 font-bold mt-0.5">Paid: ₱ ${(b.amountPaid || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Paid: ₱ ${(b.amountPaid || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                     <div class="text-[10px] text-rose-500 font-bold mt-0.5">Bal: ₱ ${unpaidBal.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                 </td>
-                <td class="py-3 px-3 text-center">
-                    <div class="flex flex-col items-center gap-1.5">
+                <td class="py-3.5 px-3 text-center">
+                    <div class="flex flex-col items-center gap-1">
                         ${statusLabel}
                         ${receivedAction}
                     </div>
                 </td>
-                <td class="py-3 px-4 text-right whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-1.5">
-                        ${unpaidBal > 0.01 ? `<button onclick="openApPaymentModal('${b.id}')" title="Record AP Payment Balance" class="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-lg border border-emerald-100 dark:border-emerald-800/30 btn-transition"><i data-lucide="coins" class="w-4 h-4"></i></button>` : ''}
-                        <button onclick="viewPaymentHistory('${b.id}')" title="View Payment History" class="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-lg border border-indigo-100 dark:border-indigo-800/30 btn-transition"><i data-lucide="eye" class="w-4 h-4"></i></button>
-                        <button onclick="openSupplierPurchaseEdit('${b.id}')" title="Modify Invoice Fields" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg btn-transition"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                        <button onclick="deleteSupplierPurchase('${b.id}')" title="Delete Invoice Record" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                    <div class="inline-flex items-center justify-end gap-1 flex-nowrap">
+                        ${unpaidBal > 0.01 ? `<button onclick="openApPaymentModal('${b.id}')" title="Record AP Payment Balance" class="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-full border border-emerald-100 dark:border-emerald-800/30 btn-transition"><i data-lucide="coins" class="w-4 h-4"></i></button>` : ''}
+                        <button onclick="viewPaymentHistory('${b.id}')" title="View Settlement Audit History" class="p-2 text-brand-600 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 rounded-full border border-brand-100 dark:border-brand-800/30 btn-transition"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                        <button onclick="openSupplierPurchaseEdit('${b.id}')" title="Modify Invoice Fields" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteSupplierPurchase('${b.id}')" title="Purge Record" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 </td>
             </tr>
@@ -2377,7 +2608,7 @@ function renderBatchMatrixTable() {
 
     let entries = Object.keys(productMap);
     if(entries.length === 0) {
-        list.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400 font-bold">No inventory or sales context logged yet.</td></tr>`;
+        list.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400 font-bold">No stock procurement or sales matrix context.</td></tr>`;
         return;
     }
 
@@ -2388,47 +2619,294 @@ function renderBatchMatrixTable() {
 
         list.innerHTML += `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                <td class="py-3 px-5 font-bold text-slate-900 dark:text-white">${name}</td>
-                <td class="py-3 px-4 text-right font-semibold text-amber-600 dark:text-amber-400">₱ ${spent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="py-3 px-4 text-right font-semibold text-indigo-600 dark:text-indigo-400">₱ ${sold.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="py-3 px-5 text-right font-black ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">₱ ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="py-3.5 px-5 font-bold text-slate-900 dark:text-white">${name}</td>
+                <td class="py-3.5 px-4 text-right font-mono font-semibold text-amber-600 dark:text-amber-400">₱ ${spent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="py-3.5 px-4 text-right font-mono font-semibold text-brand-600 dark:text-brand-400">₱ ${sold.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="py-3.5 px-5 text-right font-mono font-black ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">₱ ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
             </tr>
         `;
     });
 }
 
-// ================= EXPORT & RECEIPT =================
+// ================= EXPORT & HIGH-RESOLUTION CANVAS RECEIPT ENGINE =================
+let activeReceiptOrderData = null;
+
 function generateReceipt(orderId) {
     const order = orders.find(o => o.id === orderId); if (!order) return;
-    const paidVal = order.amountPaid !== undefined ? order.amountPaid : (order.isPaid ? order.totalRevenue : 0);
-    const statusLine = order.status === 'cancelled' ? 'VOID/CANCELLED' : (order.isPaid ? 'FULLY PAID' : (paidVal > 0 ? `PARTIAL (₱ ${(order.totalRevenue - paidVal).toFixed(2)} Bal)` : 'UNPAID'));
+    const items = getOrderItems(order);
+    activeReceiptOrderData = order;
     
-    let itemsInvoiceMatrix = '';
-    let totalDiscount = 0;
-    
-    getOrderItems(order).forEach(i => {
-        const originalSubtotal = i.qty * (i.sellPrice || 0);
-        const itemDiscount = originalSubtotal - (i.effectiveTotal || originalSubtotal);
-        totalDiscount += itemDiscount;
+    let origSubtotal = 0;
+    let lineItemsHtml = '';
+
+    items.forEach(i => {
+        const lineOrig = i.qty * (i.sellPrice || 0);
+        origSubtotal += lineOrig;
+        const itemDiscount = lineOrig - (i.effectiveTotal || lineOrig);
         
-        itemsInvoiceMatrix += `${i.name.padEnd(16)} x${i.qty.toString().padEnd(2)} ₱ ${originalSubtotal.toFixed(2).padStart(8)}\n`;
-        if (itemDiscount > 0.01) {
-            itemsInvoiceMatrix += `  Discount:         -₱ ${itemDiscount.toFixed(2).padStart(8)}\n`;
-        }
+        lineItemsHtml += `
+            <div class="flex justify-between py-1.5 border-b border-dashed border-slate-200">
+                <div class="pr-2">
+                    <div class="font-bold text-slate-900">${i.name}</div>
+                    <div class="text-[10px] text-slate-500 font-medium">${i.qty} pcs x ₱${(i.sellPrice || 0).toFixed(2)}</div>
+                </div>
+                <div class="text-right font-semibold text-slate-900 whitespace-nowrap">
+                    ₱${lineOrig.toFixed(2)}
+                    ${itemDiscount > 0.01 ? `<div class="text-[10px] text-emerald-600 font-bold">-₱${itemDiscount.toFixed(2)}</div>` : ''}
+                </div>
+            </div>
+        `;
     });
 
-    const receiptEl = document.getElementById('receipt-text');
-    if (receiptEl) {
-        receiptEl.innerText = `================================\n      CHEOREOBIZ INVOICE\n================================\nDate: ${order.date || "N/A"}\nTxn : ${order.id}\n${order.isEdited ? '(Invoice reflects edited items)\n' : ''}Billed To: ${order.customerName}\n\nLine Items:\n--------------------------------\n${itemsInvoiceMatrix}--------------------------------\nSubtotal:           ₱ ${(order.totalRevenue + totalDiscount).toFixed(2).padStart(10)}\nTotal Discount:    -₱ ${totalDiscount.toFixed(2).padStart(10)}\nGrand Total:        ₱ ${order.totalRevenue.toFixed(2).padStart(10)}\nAmount Paid:        ₱ ${paidVal.toFixed(2).padStart(10)}\nBalance Due:        ₱ ${(order.totalRevenue - paidVal).toFixed(2).padStart(10)}\n--------------------------------\nPayment:  ${statusLine}\nDelivery: ${order.isReceived ? 'Fulfilled' : 'Pending'}\n\nThank you for your business!\n================================`;
+    const totalSavings = order.totalRevenue < origSubtotal ? (origSubtotal - order.totalRevenue) : 0;
+    const tax = order.totalRevenue * 0.12;
+    const paidVal = order.amountPaid !== undefined ? order.amountPaid : (order.isPaid ? order.totalRevenue : 0);
+    const change = Math.max(0, paidVal - order.totalRevenue);
+    const balDue = Math.max(0, order.totalRevenue - paidVal);
+    const statusLine = order.status === 'cancelled' ? 'VOID / CANCELLED' : (order.isPaid ? 'PAID IN FULL' : (paidVal > 0 ? 'PARTIAL PAYMENT' : 'UNPAID'));
+
+    const renderNode = document.getElementById('receipt-render-node');
+    if (renderNode) {
+        renderNode.innerHTML = `
+            <div class="text-center pb-3 border-b-2 border-slate-900 space-y-0.5">
+                <h2 class="text-base font-black text-slate-900 tracking-tight">CHEOREOBIZ LEDGER</h2>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Official Digital Sales Receipt</p>
+            </div>
+            
+            <div class="text-[11px] space-y-1 text-slate-600 border-b border-slate-200 pb-2">
+                <div class="flex justify-between"><span>Receipt ID:</span><span class="font-bold text-slate-900">${order.id}</span></div>
+                <div class="flex justify-between"><span>Date & Time:</span><span class="font-bold text-slate-900">${order.date || 'N/A'}</span></div>
+                <div class="flex justify-between"><span>Customer:</span><span class="font-bold text-slate-900">${order.customerName}</span></div>
+                ${order.isEdited ? `<div class="text-[9px] text-brand-600 font-bold uppercase pt-0.5">(Reflects Modified Ticket)</div>` : ''}
+            </div>
+
+            <div class="space-y-1 my-3">
+                <div class="text-[10px] uppercase font-black text-slate-400 tracking-wider">Line Items</div>
+                ${lineItemsHtml}
+            </div>
+
+            <div class="space-y-1 text-xs border-t border-slate-300 pt-2 font-semibold">
+                <div class="flex justify-between text-slate-600"><span>Original Subtotal:</span><span>₱${origSubtotal.toFixed(2)}</span></div>
+                ${totalSavings > 0.01 ? `<div class="flex justify-between text-emerald-600 font-bold"><span>Total Promo Savings:</span><span>-₱${totalSavings.toFixed(2)}</span></div>` : ''}
+                <div class="flex justify-between text-slate-600"><span>Estimated Tax (12%):</span><span>₱${tax.toFixed(2)}</span></div>
+                <div class="flex justify-between text-sm font-black text-slate-900 border-t border-slate-900 pt-1.5 mt-1"><span>Grand Total:</span><span>₱${order.totalRevenue.toFixed(2)}</span></div>
+            </div>
+
+            <div class="space-y-1 text-xs border-t border-dashed border-slate-300 pt-2 text-slate-700">
+                <div class="flex justify-between"><span>Tendered Amount:</span><span class="font-bold text-emerald-600">₱${paidVal.toFixed(2)}</span></div>
+                ${change > 0 ? `<div class="flex justify-between"><span>Change:</span><span class="font-bold text-slate-900">₱${change.toFixed(2)}</span></div>` : ''}
+                ${balDue > 0 ? `<div class="flex justify-between text-rose-600 font-bold"><span>Outstanding Balance:</span><span class="font-mono">₱${balDue.toFixed(2)}</span></div>` : ''}
+                <div class="flex justify-between border-t border-slate-200 pt-1 mt-1"><span>Settlement Status:</span><span class="font-black uppercase text-slate-900">${statusLine}</span></div>
+            </div>
+
+            <div class="text-center pt-3 border-t-2 border-slate-900">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Thank you for your business!</p>
+            </div>
+        `;
     }
+
+    const receiptText = document.getElementById('receipt-text');
+    if (receiptText) {
+        receiptText.innerText = `CHEOREOBIZ RECEIPT\nReceipt: ${order.id}\nDate: ${order.date}\nCustomer: ${order.customerName}\nSubtotal: ₱${origSubtotal.toFixed(2)}\nTotal Savings: -₱${totalSavings.toFixed(2)}\nGrand Total: ₱${order.totalRevenue.toFixed(2)}\nPaid: ₱${paidVal.toFixed(2)}\nStatus: ${statusLine}`;
+    }
+
     openModal('receipt-modal');
+}
+
+function downloadReceiptAsImage() {
+    if (!activeReceiptOrderData) {
+        showToast("No active receipt data found", "error");
+        return;
+    }
+
+    const order = activeReceiptOrderData;
+    const items = getOrderItems(order);
+
+    let origSubtotal = 0;
+    items.forEach(i => origSubtotal += (i.qty * (i.sellPrice || 0)));
+    const totalSavings = order.totalRevenue < origSubtotal ? (origSubtotal - order.totalRevenue) : 0;
+    const tax = order.totalRevenue * 0.12;
+    const paidVal = order.amountPaid !== undefined ? order.amountPaid : (order.isPaid ? order.totalRevenue : 0);
+    const change = Math.max(0, paidVal - order.totalRevenue);
+    const balDue = Math.max(0, order.totalRevenue - paidVal);
+    const statusLine = order.status === 'cancelled' ? 'VOID / CANCELLED' : (order.isPaid ? 'PAID IN FULL' : (paidVal > 0 ? 'PARTIAL PAYMENT' : 'UNPAID'));
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const width = 480;
+    const padding = 24;
+    const calculatedHeight = 360 + (items.length * 36) + (totalSavings > 0.01 ? 24 : 0);
+    
+    canvas.width = width * 2;
+    canvas.height = calculatedHeight * 2;
+    
+    ctx.scale(2, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, calculatedHeight);
+
+    // Header
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '900 18px Manrope, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CHEOREOBIZ LEDGER', width / 2, 40);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '700 10px Manrope, monospace';
+    ctx.fillText('OFFICIAL DIGITAL SALES RECEIPT', width / 2, 56);
+
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(padding, 68); ctx.lineTo(width - padding, 68); ctx.stroke();
+
+    // Order Info
+    let y = 88;
+    ctx.textAlign = 'left';
+    ctx.font = '500 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Receipt ID:', padding, y);
+    ctx.textAlign = 'right'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+    ctx.fillText(order.id, width - padding, y);
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '500 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Date & Time:', padding, y);
+    ctx.textAlign = 'right'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+    ctx.fillText(order.date || 'N/A', width - padding, y);
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '500 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Customer:', padding, y);
+    ctx.textAlign = 'right'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+    ctx.fillText(order.customerName, width - padding, y);
+
+    y += 12;
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
+
+    // Items Section Header
+    y += 20;
+    ctx.textAlign = 'left'; ctx.font = '900 10px Manrope, monospace'; ctx.fillStyle = '#94a3b8';
+    ctx.fillText('LINE ITEMS', padding, y);
+
+    items.forEach(i => {
+        y += 20;
+        const lineOrig = i.qty * (i.sellPrice || 0);
+        const itemDiscount = lineOrig - (i.effectiveTotal || lineOrig);
+
+        ctx.textAlign = 'left'; ctx.font = '700 12px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+        ctx.fillText(i.name, padding, y);
+
+        ctx.textAlign = 'right'; ctx.font = '600 12px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+        ctx.fillText(`₱${lineOrig.toFixed(2)}`, width - padding, y);
+
+        y += 14;
+        ctx.textAlign = 'left'; ctx.font = '500 10px Manrope, monospace'; ctx.fillStyle = '#64748b';
+        ctx.fillText(`${i.qty} pcs x ₱${(i.sellPrice || 0).toFixed(2)}`, padding, y);
+
+        if (itemDiscount > 0.01) {
+            ctx.textAlign = 'right'; ctx.font = '700 10px Manrope, monospace'; ctx.fillStyle = '#059669';
+            ctx.fillText(`-₱${itemDiscount.toFixed(2)}`, width - padding, y);
+        }
+
+        y += 6;
+        ctx.setLineDash([3, 3]); ctx.strokeStyle = '#f1f5f9';
+        ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
+        ctx.setLineDash([]);
+    });
+
+    // Financial Totals
+    y += 16;
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Original Subtotal:', padding, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#0f172a';
+    ctx.fillText(`₱${origSubtotal.toFixed(2)}`, width - padding, y);
+
+    if (totalSavings > 0.01) {
+        y += 18;
+        ctx.textAlign = 'left'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#059669';
+        ctx.fillText('Total Promo Savings:', padding, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`-₱${totalSavings.toFixed(2)}`, width - padding, y);
+    }
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Estimated Tax (12%):', padding, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#0f172a';
+    ctx.fillText(`₱${tax.toFixed(2)}`, width - padding, y);
+
+    y += 20;
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
+
+    y += 20;
+    ctx.textAlign = 'left'; ctx.font = '900 14px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+    ctx.fillText('Grand Total:', padding, y);
+    ctx.textAlign = 'right';
+    ctx.fillText(`₱${order.totalRevenue.toFixed(2)}`, width - padding, y);
+
+    // Payments
+    y += 18;
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
+    ctx.setLineDash([]);
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Tendered Amount:', padding, y);
+    ctx.textAlign = 'right'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#059669';
+    ctx.fillText(`₱${paidVal.toFixed(2)}`, width - padding, y);
+
+    if (change > 0) {
+        y += 18;
+        ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+        ctx.fillText('Change:', padding, y);
+        ctx.textAlign = 'right'; ctx.fillStyle = '#0f172a';
+        ctx.fillText(`₱${change.toFixed(2)}`, width - padding, y);
+    }
+
+    if (balDue > 0) {
+        y += 18;
+        ctx.textAlign = 'left'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#e11d48';
+        ctx.fillText('Outstanding Balance:', padding, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`₱${balDue.toFixed(2)}`, width - padding, y);
+    }
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Settlement Status:', padding, y);
+    ctx.textAlign = 'right'; ctx.font = '900 11px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+    ctx.fillText(statusLine, width - padding, y);
+
+    // Footer
+    y += 24;
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
+
+    y += 18;
+    ctx.textAlign = 'center'; ctx.font = '700 10px Manrope, monospace'; ctx.fillStyle = '#64748b';
+    ctx.fillText('THANK YOU FOR YOUR BUSINESS!', width / 2, y);
+
+    const imgData = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.download = `Receipt_${order.id}_${Date.now()}.png`;
+    a.href = imgData;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Receipt saved as PNG image", "success");
 }
 
 function copyReceiptToClipboard() { 
     const textEl = document.getElementById('receipt-text');
     if (!textEl) return;
     navigator.clipboard.writeText(textEl.innerText).then(() => { 
-        showToast("Receipt copied", "success"); 
+        showToast("Receipt copied to clipboard", "success"); 
         closeModal('receipt-modal'); 
     }); 
 }
@@ -2440,15 +2918,15 @@ function exportToCSV() {
         const itemsSummaryLine = getOrderItems(o).map(i => `${i.qty}x${i.name}`).join(' | ');
         csv += `"${o.date||'N/A'}","${o.id}","${o.customerName.replace(/"/g, '""')}","${itemsSummaryLine.replace(/"/g, '""')}",${o.totalRevenue},${o.totalCost},${o.totalProfit},${o.amountPaid||0},${o.status === 'cancelled' ? 'Cancelled' : (o.isPaid ? 'Paid' : 'Due')},${o.isReceived ? 'Delivered' : 'Pending'},${o.isEdited?'Yes':'No'}\r\n`; 
     });
-    const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `cheoreobiz_report_${new Date().toISOString().split('T')[0]}.csv`; document.body.appendChild(a); a.click(); a.remove();
+    const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `cheoreobiz_sales_report_${new Date().toISOString().split('T')[0]}.csv`; document.body.appendChild(a); a.click(); a.remove();
 }
 
 function exportData() {
     const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ inventory, orders, bundles, stockHistory, activityLog, bnplRecords }, null, 2));
-    a.download = `cheoreobiz_backup_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.remove(); showToast("Backup downloaded", "success");
+    a.download = `cheoreobiz_backup_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.remove(); showToast("Database backup downloaded", "success");
 }
 
-// ================= SUMMARY / STATS KPI LOGIC =================
+// ================= EXECUTIVE SUMMARY / KPI RE-CALCULATION ENGINE =================
 function renderSummary() {
     let revenue = 0; let profit = 0; let totalSpent = 0;
     let completedOrdersCount = 0; 
@@ -2483,7 +2961,7 @@ function renderSummary() {
 
     inventory.forEach(i => {
         const currentStock = i.stockQty || 0;
-        const avgCPP = i.unitCost || 0;
+        const avgCPP = getProductHistoricalCPP(i.name, i.unitCost);
         const price = i.sellPrice || 0;
 
         inventoryVal += currentStock * avgCPP;
