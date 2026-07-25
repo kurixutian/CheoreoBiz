@@ -153,7 +153,9 @@ function initDateDefaults() {
 
 // ================= UTILITIES & NOTIFICATIONS =================
 function initIcons() { 
-    if (window.lucide) lucide.createIcons(); 
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons(); 
+    }
 }
 
 function showToast(message, type = 'success') {
@@ -223,7 +225,6 @@ function getOrderItems(order) {
 }
 
 // ================= DYNAMIC HISTORICAL CPP CALCULATION ENGINE =================
-// Lifetime Average CPP = Sum of all historical BNPL costs / Sum of all historical BNPL quantities
 function getProductHistoricalCPP(productName, fallbackUnitCost = 0) {
     if (!productName) return fallbackUnitCost;
     let totalCostSum = 0;
@@ -469,7 +470,7 @@ function updateThemeIcons() {
     const deskIcon = document.getElementById('theme-icon');
     if (deskIcon) { 
         deskIcon.setAttribute('data-lucide', iconName); 
-        lucide.createIcons({attrs:{class:['w-4','h-4']}}); 
+        initIcons();
     }
 }
 
@@ -1432,7 +1433,7 @@ function renderSmartSuggestions() {
                 <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
                 Add items to basket to activate complementary product suggestions.
             </div>`;
-        if (window.lucide) lucide.createIcons();
+        initIcons();
         return;
     }
 
@@ -1452,7 +1453,7 @@ function renderSmartSuggestions() {
             </div>
         `;
     });
-    if (window.lucide) lucide.createIcons();
+    initIcons();
 }
 
 function renderCart() {
@@ -2276,7 +2277,6 @@ function saveSupplierPurchaseEdit(e) {
     }
 }
 
-// PERMANENT BNPL DELETION + FIREBASE PURGE + DYNAMIC CPP RE-CALCULATION
 function deleteSupplierPurchase(id) {
     const record = bnplRecords.find(b => b.id === id);
     if (!record) return;
@@ -2292,19 +2292,10 @@ function deleteSupplierPurchase(id) {
             });
         }
         
-        // 1. Remove record permanently from active memory
         bnplRecords = bnplRecords.filter(b => b.id !== id);
-        
-        // 2. Persist deletion in Firebase Realtime Database
         saveBnpl();
-        
-        // 3. Recalculate lifetime Average CPP dynamically without the deleted row
         syncInventoryCPP();
-        
-        // 4. Save updated inventory CPP & stock counts to Firebase
         saveInventory();
-        
-        // 5. Update UI view
         renderBnplUI();
         renderInventoryTable();
         renderSummary();
