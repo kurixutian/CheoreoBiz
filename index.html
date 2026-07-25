@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CheoreoBiz Ledger — Enterprise Modern Cloud POS & ERP</title>
     
-    <!-- Manrope & JetBrains Mono Fonts -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS Engine Configuration -->
+    <!-- Tailwind CSS Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -63,8 +63,11 @@
         }
     </script>
     
-    <!-- Lucide Icon Library & Firebase Compatibility SDKs -->
+    <!-- Lucide Icon Library (Primary + CDNjs Fallback) -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js" integrity="sha512-4U6s9K1O9548EaJ0c+W493G0K8V56QO1Bf7xM05X94+814Y1+2R1b6u7L64eE+vQO+mR4zN19aG101c7u" crossorigin="anonymous"></script>
+
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -200,7 +203,6 @@
                     </div>
                 </div>
                 
-                <!-- Header Control Tools Tray (Clean Symbol/Logo buttons without circle borders) -->
                 <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                     <button onclick="toggleCalculator(true)" class="p-2 sm:p-2.5 text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/40 rounded-xl transition-all btn-transition flex items-center justify-center" title="Calculator">
                         <i data-lucide="calculator" class="w-4 h-4"></i>
@@ -220,7 +222,7 @@
                 </div>
             </div>
 
-            <!-- Primary Header Navigation Tabs (Desktop & Tablet) -->
+            <!-- Primary Header Navigation Tabs -->
             <nav class="hidden sm:flex container mx-auto px-4 lg:px-8 max-w-[1440px] gap-1 overflow-x-auto no-scrollbar pb-2 pt-1">
                 <button onclick="switchTab('dashboard')" data-tab-btn="dashboard" class="tab-active flex-shrink-0 flex items-center gap-2 px-5 py-2 rounded-full font-bold text-xs transition-all whitespace-nowrap">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview Dashboard
@@ -252,7 +254,6 @@
                             <p class="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">Realtime revenue performance metrics and inventory valuation.</p>
                         </div>
                         
-                        <!-- Timeframe Selection Segment Filter -->
                         <div class="flex bg-slate-200/60 dark:bg-darkcard p-1 rounded-full text-xs font-bold border border-slate-200 dark:border-darkborder shadow-inner w-full sm:w-auto">
                             <button onclick="setDashboardTimeframe('all')" data-timeframe="all" class="px-4 py-1.5 rounded-full bg-white dark:bg-slate-800 shadow-xs text-slate-900 dark:text-white btn-transition flex-1 sm:flex-none">All Time</button>
                             <button onclick="setDashboardTimeframe('today')" data-timeframe="today" class="px-4 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 btn-transition flex-1 sm:flex-none">Today</button>
@@ -348,7 +349,6 @@
 
                     <!-- Split Widgets Matrix -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
-                        <!-- Stock Status Breakdown Widget -->
                         <div class="bg-white dark:bg-darkcard rounded-4xl border border-slate-200/80 dark:border-darkborder p-5 sm:p-6 shadow-sleek flex flex-col gap-3 lg:col-span-1">
                             <h3 class="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
                                 <i data-lucide="box" class="w-4 h-4 text-brand-500"></i> Stock Distribution
@@ -622,7 +622,6 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Cart Items Container -->
                                 <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-slate-50/30 dark:bg-darkbg/20 max-h-[45vh] xl:max-h-[350px]">
                                     <div id="cart-items-container" class="space-y-2.5"></div>
                                     
@@ -642,7 +641,6 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Financial Calculation Summary -->
                                 <div class="p-5 border-t border-slate-200/80 dark:border-darkborder bg-white dark:bg-darkcard space-y-3.5 flex-none rounded-b-4xl">
                                     <div class="space-y-1 text-xs font-bold text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-darkborder pb-2.5">
                                         <div class="flex justify-between"><span>Subtotal:</span><span class="text-slate-700 dark:text-slate-200 font-mono">₱ <span id="cart-subtotal-display">0.00</span></span></div>
@@ -717,7 +715,6 @@
                             </div>
                         </div>
 
-                        <!-- Table container with flex-nowrap on actions to completely prevent button stacking -->
                         <div class="w-full overflow-x-auto custom-scrollbar min-h-[300px]">
                             <table class="w-full min-w-[750px] divide-y divide-slate-200 dark:divide-darkborder">
                                 <thead class="bg-slate-50/80 dark:bg-darkbg/80">
@@ -764,7 +761,6 @@
 
                 <!-- SECTION 5: SUPPLIER PURCHASES & ACCOUNTS PAYABLE -->
                 <section data-tab-content="bnpl" class="hidden space-y-6 animate-fade-in">
-                    <!-- Cash Flow Metrics Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="bg-gradient-to-br from-brand-600 to-indigo-700 text-white p-5 rounded-4xl border border-brand-400/30 shadow-md flex flex-col justify-between transition-all hover:shadow-glow">
                             <div class="flex justify-between items-start">
@@ -795,7 +791,6 @@
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-                        <!-- Supplier Entry Form Container -->
                         <details id="bnpl-form-container" class="bg-white dark:bg-darkcard rounded-4xl border border-slate-200/80 dark:border-darkborder shadow-sleek xl:col-span-1 group" open>
                             <summary class="p-5 border-b border-slate-200/80 dark:border-darkborder flex justify-between items-center cursor-pointer select-none focus:outline-none">
                                 <h2 class="text-sm font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
