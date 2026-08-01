@@ -1110,7 +1110,7 @@ function renderInventoryTable() {
         }
 
         let detailBlock = '';
-        if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" class="w-10 h-10 object-cover rounded-2xl shadow-xs border border-slate-200/50 dark:border-darkborder flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate flex items-center">${item.name}${statusBadge}</span>${item.notes ? `<span class="text-[10px] text-slate-400 truncate max-w-[140px]">${item.notes}</span>` : ''}</div></div>`;
+        if (item.image) detailBlock = `<div class="flex items-center gap-3"><img src="${item.image}" loading="lazy" class="w-10 h-10 object-cover rounded-2xl shadow-xs border border-slate-200/50 dark:border-darkborder flex-shrink-0"><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate flex items-center">${item.name}${statusBadge}</span>${item.notes ? `<span class="text-[10px] text-slate-400 truncate max-w-[140px]">${item.notes}</span>` : ''}</div></div>`;
         else detailBlock = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 flex items-center justify-center font-black text-xs flex-shrink-0 border border-brand-100 dark:border-brand-900/50">${item.name.substring(0,2).toUpperCase()}</div><div class="flex flex-col"><span class="font-bold text-slate-900 dark:text-white max-w-[150px] truncate flex items-center">${item.name}${statusBadge}</span>${item.notes ? `<span class="text-[10px] text-slate-400 truncate max-w-[140px]">${item.notes}</span>` : ''}</div></div>`;
 
         const averageCPP = getProductHistoricalCPP(item.name, item.unitCost);
@@ -1132,7 +1132,7 @@ function renderInventoryTable() {
                 ${detailBlock}
             </td>
             <td class="py-3.5 px-3 sm:px-4 text-center">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black tracking-wide ${item.stockQty <= 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : (item.stockQty <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300')} border ${item.stockQty <= 0 ? 'border-rose-200 dark:border-rose-800/30' : (item.stockQty <= 3 ? 'border-amber-200 dark:border-amber-800/30' : 'border-slate-200 dark:border-slate-700/50')}">${item.stockQty} pcs</span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black tracking-wide ${item.stockQty <= 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : (item.stockQty <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:text-slate-800 dark:text-slate-300')} border ${item.stockQty <= 0 ? 'border-rose-200 dark:border-rose-800/30' : (item.stockQty <= 3 ? 'border-amber-200 dark:border-amber-800/30' : 'border-slate-200 dark:border-slate-700/50')}">${item.stockQty} pcs</span>
             </td>
             <td class="py-3.5 px-3 sm:px-4 text-right text-slate-500 font-mono font-semibold tracking-tight" title="${averageCPP}">₱ ${averageCPP.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:4})}</td>
             <td class="py-3.5 px-3 sm:px-4 text-right font-black text-brand-600 dark:text-brand-400 font-mono tracking-tight">₱ ${sellingPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
@@ -1141,7 +1141,7 @@ function renderInventoryTable() {
             <td class="py-3.5 px-3 sm:px-4 text-right font-mono font-bold text-slate-700 dark:text-slate-200">₱ ${totalValue.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
             <td class="py-3.5 px-4 sm:px-5 text-right action-prevent-trigger">
                 <div class="flex items-center justify-end gap-1.5">
-                    <button onclick="addToCart('${item.id}'); switchTab('orders');" title="Sell Item" class="p-2 text-brand-600 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 rounded-full transition-colors border border-brand-100 dark:border-brand-800/30 shadow-xs btn-transition flex items-center justify-center min-w-[34px] min-h-[34px]">
+                    <button onclick="addToCart('${item.id}'); switchTab('orders');" title="Sell Item" class="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-full transition-colors border border-blue-100 dark:border-blue-800/30 shadow-xs btn-transition flex items-center justify-center min-w-[34px] min-h-[34px]">
                         <i data-lucide="plus" class="w-4 h-4"></i>
                     </button>
                     ${!item.isReject ? `<button onclick="openCreateRejectModal('${item.id}')" title="Isolate Defective Item" class="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 rounded-full transition-colors border border-amber-100 dark:border-amber-800/30 shadow-xs btn-transition flex items-center justify-center min-w-[34px] min-h-[34px]">
@@ -1304,7 +1304,7 @@ function renderBundlesTable() {
                 <td class="py-3.5 px-3 sm:px-4 text-xs">${itemsStr}</td>
                 <td class="py-3.5 px-3 sm:px-4 text-right font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight">₱ ${bundle.price.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 <td class="py-3.5 px-3 sm:px-4 text-center"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" onchange="toggleBundleStatus('${bundle.id}')" class="sr-only peer" ${bundle.isActive ? 'checked' : ''}><div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-slate-700 peer-checked:bg-emerald-500 shadow-inner"></div></label></td>
-                <td class="py-3.5 px-4 sm:px-5 text-right whitespace-nowrap"><button onclick="editBundle('${bundle.id}')" title="Edit Bundle" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="deleteBundle('${bundle.id}')" title="Delete Bundle" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-full transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                <td class="py-3.5 px-4 sm:px-5 text-right whitespace-nowrap"><button onclick="editBundle('${bundle.id}')" title="Edit Bundle" class="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-full transition-colors btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="deleteBundle('${bundle.id}')" title="Delete Bundle" class="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
             </tr>
         `;
     }); initIcons();
@@ -1358,7 +1358,7 @@ function renderPOSCatalog() {
     if(itemsToDisplay.length === 0) { grid.innerHTML = `<div class="col-span-full py-12 flex flex-col items-center justify-center text-slate-400"><i data-lucide="search-x" class="w-10 h-10 mb-2 opacity-30"></i><p class="text-xs font-bold">No products match search criteria.</p></div>`; initIcons(); return; }
 
     itemsToDisplay.forEach(item => {
-        let imageBlock = item.image ? `<div class="aspect-square w-full rounded-2xl mb-2 overflow-hidden bg-slate-100 dark:bg-darkinput border border-slate-200/50 dark:border-darkborder"><img src="${item.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"></div>`
+        let imageBlock = item.image ? `<div class="aspect-square w-full rounded-2xl mb-2 overflow-hidden bg-slate-100 dark:bg-darkinput border border-slate-200/50 dark:border-darkborder"><img src="${item.image}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"></div>`
             : `<div class="aspect-square w-full rounded-2xl mb-2 bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 flex items-center justify-center font-black text-xl border border-brand-100/50 dark:border-brand-900/50 shadow-inner">${item.name.substring(0,2).toUpperCase()}</div>`;
         const outOfStock = item.stockQty <= 0;
         grid.innerHTML += `
@@ -1368,7 +1368,7 @@ function renderPOSCatalog() {
                     <h4 class="font-extrabold text-[11px] leading-tight mb-1 text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">${item.name}</h4>
                     <span class="text-[9px] font-black uppercase tracking-wider ${outOfStock ? 'text-rose-500' : 'text-slate-400'}">${item.stockQty} in stock</span>
                 </div>
-                <div class="mt-2 flex items-center justify-between"><span class="text-brand-600 dark:text-brand-400 font-mono font-black text-xs sm:text-sm tracking-tight">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>${!outOfStock ? `<div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-brand-100 dark:group-hover:bg-brand-950 flex items-center justify-center text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors"><i data-lucide="plus" class="w-3.5 h-3.5"></i></div>` : ''}</div>
+                <div class="mt-2 flex items-center justify-between"><span class="text-blue-600 dark:text-blue-400 font-mono font-black text-xs sm:text-sm tracking-tight">₱ ${(item.sellPrice || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>${!outOfStock ? `<div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-950 flex items-center justify-center text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><i data-lucide="plus" class="w-3.5 h-3.5"></i></div>` : ''}</div>
             </div>
         `;
     }); initIcons();
@@ -1447,7 +1447,7 @@ function renderSmartSuggestions() {
                     <p class="text-slate-900 dark:text-slate-200 font-bold truncate">${item.name}</p>
                     <p class="text-[10px] text-slate-400 font-medium">Stock: ${item.stockQty} left • ₱ ${item.sellPrice.toFixed(2)}</p>
                 </div>
-                <button type="button" onclick="addToCart('${item.id}')" class="px-3 py-1 bg-brand-50 dark:bg-brand-500/10 hover:bg-brand-100 text-brand-600 dark:text-brand-400 text-[11px] font-extrabold rounded-full btn-transition flex items-center gap-1 flex-shrink-0">
+                <button type="button" onclick="addToCart('${item.id}')" class="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 text-blue-600 dark:text-blue-400 text-[11px] font-extrabold rounded-full btn-transition flex items-center gap-1 flex-shrink-0">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add
                 </button>
             </div>
@@ -1499,7 +1499,7 @@ function renderCart() {
                 <div class="flex items-center gap-1 bg-slate-50 dark:bg-darkinput p-1 rounded-full border border-slate-100 dark:border-darkborder shadow-inner">
                     <button onclick="updateCartQty('${item.id}', -1)" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all"><i data-lucide="minus" class="w-3.5 h-3.5"></i></button>
                     <span class="w-6 text-center font-mono font-black text-xs text-slate-900 dark:text-white">${item.qty}</span>
-                    <button onclick="updateCartQty('${item.id}', 1)" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="updateCartQty('${item.id}', 1)" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
                 </div>
             </div>
         `;
@@ -1753,20 +1753,31 @@ function renderOrdersTable() {
                     : `<button onclick="event.stopPropagation(); toggleOrderPaid('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full border border-rose-200 dark:border-rose-800/30 uppercase tracking-wider whitespace-nowrap"><i data-lucide="alert-circle" class="w-3 h-3"></i> Unpaid</button>`));
         
         const delBtn = isCancelled ? `<span class="text-slate-400 font-bold">-</span>` 
-            : (order.isReceived ? `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700 uppercase tracking-wider whitespace-nowrap"><i data-lucide="package-check" class="w-3 h-3 text-emerald-500"></i> Delivered</button>`
+            : (order.isReceived ? `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800/30 uppercase tracking-wider whitespace-nowrap"><i data-lucide="package-check" class="w-3 h-3 text-blue-500"></i> Completed</button>`
                 : `<button onclick="event.stopPropagation(); toggleOrderReceived('${order.id}')" class="btn-transition inline-flex items-center gap-1 px-3 py-1 text-[9px] font-black bg-white dark:bg-darkcard text-slate-500 rounded-full border border-slate-200 dark:border-darkborder uppercase tracking-wider whitespace-nowrap shadow-xs"><i data-lucide="truck" class="w-3 h-3 text-amber-500"></i> Pending</button>`);
 
         const editBadge = order.isEdited && !isCancelled ? `<span class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 align-middle">Edited</span>` : '';
-        const itemsListStr = getOrderItems(order).map(i => `${i.qty}x ${i.name}`).join(', ');
+        
+        const orderItems = getOrderItems(order);
+        const itemsListHtml = orderItems.map(i => {
+            const matchedInv = inventory.find(inv => inv.name.toLowerCase().trim() === i.name.toLowerCase().trim());
+            const thumbHtml = matchedInv && matchedInv.image ? `<img src="${matchedInv.image}" loading="lazy" class="w-7 h-7 object-cover rounded-xl border border-slate-200/80 dark:border-darkborder flex-shrink-0" title="${i.name}">` : `<div class="w-7 h-7 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 flex items-center justify-center font-black text-[10px] flex-shrink-0 border border-brand-100">${i.name.substring(0,2).toUpperCase()}</div>`;
+            return `
+                <div class="flex items-center gap-2 mb-1 last:mb-0">
+                    ${thumbHtml}
+                    <span class="font-bold text-slate-800 dark:text-slate-200 truncate" title="${i.qty}x ${i.name}">${i.qty}x ${i.name}</span>
+                </div>
+            `;
+        }).join('');
 
-        let actionHtml = `<button onclick="event.stopPropagation(); generateReceipt('${order.id}')" title="Receipt" class="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-full transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
+        let actionHtml = `<button onclick="event.stopPropagation(); generateReceipt('${order.id}')" title="Receipt" class="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/20 rounded-full transition-colors btn-transition"><i data-lucide="receipt" class="w-4 h-4"></i></button>`;
         
         if(!isCancelled) {
-            actionHtml += `<button onclick="event.stopPropagation(); editOrder('${order.id}')" title="Edit Order" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); cancelOrder('${order.id}')" title="Cancel Order" class="p-2 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/20 rounded-full transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
+            actionHtml += `<button onclick="event.stopPropagation(); editOrder('${order.id}')" title="Edit Order" class="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-full transition-colors btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); cancelOrder('${order.id}')" title="Cancel Order" class="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-colors btn-transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>`;
         }
 
         if (isCancelled) {
-            actionHtml += `<button onclick="event.stopPropagation(); deleteOrderPermanently('${order.id}')" title="Delete Permanently" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-full transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            actionHtml += `<button onclick="event.stopPropagation(); deleteOrderPermanently('${order.id}')" title="Delete Permanently" class="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-colors btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
         }
 
         const row = document.createElement('tr');
@@ -1781,10 +1792,10 @@ function renderOrdersTable() {
             <td class="py-3 px-3 sm:px-4 text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 ${order.date || "N/A"}
             </td>
-            <td class="py-3 px-3 sm:px-4 text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate-cell max-w-[180px]" title="${itemsListStr}">
-                ${itemsListStr}
+            <td class="py-3 px-3 sm:px-4 text-[11px] font-medium text-slate-600 dark:text-slate-300 max-w-[220px]">
+                ${itemsListHtml}
             </td>
-            <td class="py-3 px-3 sm:px-4 text-right font-mono font-black text-brand-600 dark:text-brand-400 tracking-tight whitespace-nowrap ${isCancelled?'line-through':''}">
+            <td class="py-3 px-3 sm:px-4 text-right font-mono font-black text-blue-600 dark:text-blue-400 tracking-tight whitespace-nowrap ${isCancelled?'line-through':''}">
                 ₱ ${order.totalRevenue.toLocaleString(undefined, {minimumFractionDigits:2})}
             </td>
             <td class="py-3 px-3 sm:px-4 text-center action-prevent-trigger whitespace-nowrap">
@@ -2499,18 +2510,22 @@ function renderBnplTable() {
         const unpaidBal = b.totalAmount - (b.amountPaid || 0);
         const dueDateStr = b.dueDate || 'N/A';
 
-        const itemsStr = b.items.map(item => `
-            <div class="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                • ${item.qty}x ${item.itemName} <span class="text-slate-400 text-[10px] font-mono">(₱ ${item.costPerPiece.toFixed(2)}/pc)</span>
-            </div>
-        `).join('');
+        const itemsStr = b.items.map(item => {
+            const matchedInv = inventory.find(inv => inv.name.toLowerCase().trim() === item.itemName.toLowerCase().trim());
+            const thumbHtml = matchedInv && matchedInv.image ? `<img src="${matchedInv.image}" loading="lazy" class="w-6 h-6 object-cover rounded-lg mr-2 inline-block border border-slate-200">` : '';
+            return `
+                <div class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center mb-1">
+                    ${thumbHtml}• ${item.qty}x ${item.itemName} <span class="text-slate-400 text-[10px] font-mono ml-1">(₱ ${item.costPerPiece.toFixed(2)}/pc)</span>
+                </div>
+            `;
+        }).join('');
 
         let receivedAction = '';
         if(b.isReceived) {
             const rDate = b.receivedDate ? new Date(b.receivedDate).toLocaleDateString() : '';
             receivedAction = `<div class="flex flex-col items-center"><span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-full"><i data-lucide="package-check" class="w-3 h-3"></i> Loaded</span><span class="text-[9px] text-slate-400 mt-0.5">${rDate}</span></div>`;
         } else {
-            receivedAction = `<button onclick="receiveSupplierStockBatch('${b.id}')" title="Load Quantities to Active Inventory" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 text-[9px] font-black uppercase rounded-full border border-brand-100 dark:border-brand-800/30 btn-transition flex items-center gap-1"><i data-lucide="download-cloud" class="w-3 h-3"></i> Receive</button>`;
+            receivedAction = `<button onclick="receiveSupplierStockBatch('${b.id}')" title="Load Quantities to Active Inventory" class="px-3 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase rounded-full border border-emerald-100 dark:border-emerald-800/30 btn-transition flex items-center gap-1"><i data-lucide="download-cloud" class="w-3 h-3"></i> Receive</button>`;
         }
 
         list.innerHTML += `
@@ -2523,7 +2538,7 @@ function renderBnplTable() {
                     <div class="text-slate-500 dark:text-slate-400 font-medium">Pur: ${b.purchaseDate}</div>
                     <div class="text-rose-500 font-semibold mt-0.5">Due: ${dueDateStr}</div>
                 </td>
-                <td class="py-3.5 px-3 min-w-[150px]">${itemsStr}</td>
+                <td class="py-3.5 px-3 min-w-[180px]">${itemsStr}</td>
                 <td class="py-3.5 px-3 text-right font-mono">
                     <div class="font-black text-slate-800 dark:text-white">Total: ₱ ${b.totalAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                     <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Paid: ₱ ${(b.amountPaid || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
@@ -2539,8 +2554,8 @@ function renderBnplTable() {
                     <div class="inline-flex items-center justify-end gap-1 flex-nowrap">
                         ${unpaidBal > 0.01 ? `<button onclick="openApPaymentModal('${b.id}')" title="Record AP Payment Balance" class="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-full border border-emerald-100 dark:border-emerald-800/30 btn-transition"><i data-lucide="coins" class="w-4 h-4"></i></button>` : ''}
                         <button onclick="viewPaymentHistory('${b.id}')" title="View Settlement Audit History" class="p-2 text-brand-600 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 rounded-full border border-brand-100 dark:border-brand-800/30 btn-transition"><i data-lucide="eye" class="w-4 h-4"></i></button>
-                        <button onclick="openSupplierPurchaseEdit('${b.id}')" title="Modify Invoice Fields" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                        <button onclick="deleteSupplierPurchase('${b.id}')" title="Purge Record" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="openSupplierPurchaseEdit('${b.id}')" title="Modify Invoice Fields" class="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 rounded-full btn-transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteSupplierPurchase('${b.id}')" title="Purge Record" class="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-full btn-transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 </td>
             </tr>
@@ -2635,11 +2650,17 @@ function generateReceipt(orderId) {
         origSubtotal += lineOrig;
         const itemDiscount = lineOrig - (i.effectiveTotal || lineOrig);
         
+        const matchedInv = inventory.find(inv => inv.name.toLowerCase().trim() === i.name.toLowerCase().trim());
+        const thumbHtml = matchedInv && matchedInv.image ? `<img src="${matchedInv.image}" loading="lazy" class="w-8 h-8 object-cover rounded-xl mr-2.5 inline-block border border-slate-200">` : '';
+
         lineItemsHtml += `
-            <div class="flex justify-between py-1.5 border-b border-dashed border-slate-200">
-                <div class="pr-2">
-                    <div class="font-bold text-slate-900">${i.name}</div>
-                    <div class="text-[10px] text-slate-500 font-medium">${i.qty} pcs x ₱${(i.sellPrice || 0).toFixed(2)}</div>
+            <div class="flex justify-between items-center py-2 border-b border-dashed border-slate-200">
+                <div class="flex items-center pr-2">
+                    ${thumbHtml}
+                    <div>
+                        <div class="font-bold text-slate-900">${i.name}</div>
+                        <div class="text-[10px] text-slate-500 font-medium">${i.qty} pcs x ₱${(i.sellPrice || 0).toFixed(2)}</div>
+                    </div>
                 </div>
                 <div class="text-right font-semibold text-slate-900 whitespace-nowrap">
                     ₱${lineOrig.toFixed(2)}
@@ -2659,7 +2680,8 @@ function generateReceipt(orderId) {
     const renderNode = document.getElementById('receipt-render-node');
     if (renderNode) {
         renderNode.innerHTML = `
-            <div class="text-center pb-3 border-b-2 border-slate-900 space-y-0.5">
+            <div class="text-center pb-3 border-b-2 border-slate-900 space-y-1">
+                <div class="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-900 text-white font-black text-sm mb-1">CB</div>
                 <h2 class="text-base font-black text-slate-900 tracking-tight">CHEOREOBIZ LEDGER</h2>
                 <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Official Digital Sales Receipt</p>
             </div>
@@ -2667,27 +2689,29 @@ function generateReceipt(orderId) {
             <div class="text-[11px] space-y-1 text-slate-600 border-b border-slate-200 pb-2">
                 <div class="flex justify-between"><span>Receipt ID:</span><span class="font-bold text-slate-900">${order.id}</span></div>
                 <div class="flex justify-between"><span>Date & Time:</span><span class="font-bold text-slate-900">${order.date || 'N/A'}</span></div>
-                <div class="flex justify-between"><span>Customer:</span><span class="font-bold text-slate-900">${order.customerName}</span></div>
+                <div class="flex justify-between"><span>Cashier:</span><span class="font-bold text-slate-900">Admin Ledger</span></div>
+                <div class="flex justify-between"><span>Customer Name:</span><span class="font-bold text-slate-900">${order.customerName}</span></div>
                 ${order.isEdited ? `<div class="text-[9px] text-brand-600 font-bold uppercase pt-0.5">(Reflects Modified Ticket)</div>` : ''}
             </div>
 
             <div class="space-y-1 my-3">
-                <div class="text-[10px] uppercase font-black text-slate-400 tracking-wider">Line Items</div>
+                <div class="text-[10px] uppercase font-black text-slate-400 tracking-wider">Product List</div>
                 ${lineItemsHtml}
             </div>
 
             <div class="space-y-1 text-xs border-t border-slate-300 pt-2 font-semibold">
-                <div class="flex justify-between text-slate-600"><span>Original Subtotal:</span><span>₱${origSubtotal.toFixed(2)}</span></div>
-                ${totalSavings > 0.01 ? `<div class="flex justify-between text-emerald-600 font-bold"><span>Total Promo Savings:</span><span>-₱${totalSavings.toFixed(2)}</span></div>` : ''}
-                <div class="flex justify-between text-slate-600"><span>Estimated Tax (12%):</span><span>₱${tax.toFixed(2)}</span></div>
+                <div class="flex justify-between text-slate-600"><span>Original Total:</span><span>₱${origSubtotal.toFixed(2)}</span></div>
+                <div class="flex justify-between text-slate-600"><span>Bundle / Promo Discount:</span><span>-₱0.00</span></div>
+                ${totalSavings > 0.01 ? `<div class="flex justify-between text-emerald-600 font-bold"><span>Promo Discount / Total Savings:</span><span>-₱${totalSavings.toFixed(2)}</span></div>` : ''}
+                <div class="flex justify-between text-emerald-700 font-bold bg-emerald-50 p-2 rounded-xl mt-1"><span>You Saved:</span><span>₱${totalSavings.toFixed(2)}</span></div>
                 <div class="flex justify-between text-sm font-black text-slate-900 border-t border-slate-900 pt-1.5 mt-1"><span>Grand Total:</span><span>₱${order.totalRevenue.toFixed(2)}</span></div>
             </div>
 
             <div class="space-y-1 text-xs border-t border-dashed border-slate-300 pt-2 text-slate-700">
-                <div class="flex justify-between"><span>Tendered Amount:</span><span class="font-bold text-emerald-600">₱${paidVal.toFixed(2)}</span></div>
+                <div class="flex justify-between"><span>Amount Paid:</span><span class="font-bold text-emerald-600">₱${paidVal.toFixed(2)}</span></div>
                 ${change > 0 ? `<div class="flex justify-between"><span>Change:</span><span class="font-bold text-slate-900">₱${change.toFixed(2)}</span></div>` : ''}
                 ${balDue > 0 ? `<div class="flex justify-between text-rose-600 font-bold"><span>Outstanding Balance:</span><span class="font-mono">₱${balDue.toFixed(2)}</span></div>` : ''}
-                <div class="flex justify-between border-t border-slate-200 pt-1 mt-1"><span>Settlement Status:</span><span class="font-black uppercase text-slate-900">${statusLine}</span></div>
+                <div class="flex justify-between border-t border-slate-200 pt-1 mt-1"><span>Payment Status:</span><span class="font-black uppercase text-slate-900">${statusLine}</span></div>
             </div>
 
             <div class="text-center pt-3 border-t-2 border-slate-900">
@@ -2698,13 +2722,13 @@ function generateReceipt(orderId) {
 
     const receiptText = document.getElementById('receipt-text');
     if (receiptText) {
-        receiptText.innerText = `CHEOREOBIZ RECEIPT\nReceipt: ${order.id}\nDate: ${order.date}\nCustomer: ${order.customerName}\nSubtotal: ₱${origSubtotal.toFixed(2)}\nTotal Savings: -₱${totalSavings.toFixed(2)}\nGrand Total: ₱${order.totalRevenue.toFixed(2)}\nPaid: ₱${paidVal.toFixed(2)}\nStatus: ${statusLine}`;
+        receiptText.innerText = `CHEOREOBIZ RECEIPT\nReceipt: ${order.id}\nDate: ${order.date}\nCustomer: ${order.customerName}\nOriginal Total: ₱${origSubtotal.toFixed(2)}\nYou Saved: ₱${totalSavings.toFixed(2)}\nGrand Total: ₱${order.totalRevenue.toFixed(2)}\nAmount Paid: ₱${paidVal.toFixed(2)}\nPayment Status: ${statusLine}`;
     }
 
     openModal('receipt-modal');
 }
 
-function downloadReceiptAsImage() {
+async function downloadReceiptAsImage() {
     if (!activeReceiptOrderData) {
         showToast("No active receipt data found", "error");
         return;
@@ -2713,10 +2737,29 @@ function downloadReceiptAsImage() {
     const order = activeReceiptOrderData;
     const items = getOrderItems(order);
 
+    // Preload item images in parallel for maximum speed and fidelity
+    const imagePromises = items.map(i => {
+        return new Promise((resolve) => {
+            const matchedInv = inventory.find(inv => inv.name.toLowerCase().trim() === i.name.toLowerCase().trim());
+            if (matchedInv && matchedInv.image) {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve({ name: i.name, img });
+                img.onerror = () => resolve({ name: i.name, img: null });
+                img.src = matchedInv.image;
+            } else {
+                resolve({ name: i.name, img: null });
+            }
+        });
+    });
+
+    const loadedImages = await Promise.all(imagePromises);
+    const imageMap = {};
+    loadedImages.forEach(item => { imageMap[item.name] = item.img; });
+
     let origSubtotal = 0;
     items.forEach(i => origSubtotal += (i.qty * (i.sellPrice || 0)));
     const totalSavings = order.totalRevenue < origSubtotal ? (origSubtotal - order.totalRevenue) : 0;
-    const tax = order.totalRevenue * 0.12;
     const paidVal = order.amountPaid !== undefined ? order.amountPaid : (order.isPaid ? order.totalRevenue : 0);
     const change = Math.max(0, paidVal - order.totalRevenue);
     const balDue = Math.max(0, order.totalRevenue - paidVal);
@@ -2727,7 +2770,7 @@ function downloadReceiptAsImage() {
     
     const width = 480;
     const padding = 24;
-    const calculatedHeight = 360 + (items.length * 36) + (totalSavings > 0.01 ? 24 : 0);
+    const calculatedHeight = 440 + (items.length * 52) + (totalSavings > 0.01 ? 36 : 0);
     
     canvas.width = width * 2;
     canvas.height = calculatedHeight * 2;
@@ -2736,22 +2779,39 @@ function downloadReceiptAsImage() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, calculatedHeight);
 
-    // Header
+    // Header Logo Badge (CB)
+    let y = 32;
+    ctx.fillStyle = '#0f172a';
+    if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(width / 2 - 20, y, 40, 40, 12);
+        ctx.fill();
+    } else {
+        ctx.fillRect(width / 2 - 20, y, 40, 40);
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 14px Manrope, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CB', width / 2, y + 25);
+
+    y += 52;
     ctx.fillStyle = '#0f172a';
     ctx.font = '900 18px Manrope, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('CHEOREOBIZ LEDGER', width / 2, 40);
+    ctx.fillText('CHEOREOBIZ LEDGER', width / 2, y);
 
+    y += 18;
     ctx.fillStyle = '#64748b';
     ctx.font = '700 10px Manrope, monospace';
-    ctx.fillText('OFFICIAL DIGITAL SALES RECEIPT', width / 2, 56);
+    ctx.fillText('OFFICIAL DIGITAL SALES RECEIPT', width / 2, y);
 
+    y += 14;
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(padding, 68); ctx.lineTo(width - padding, 68); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
 
     // Order Info
-    let y = 88;
+    y += 22;
     ctx.textAlign = 'left';
     ctx.font = '500 11px Manrope, monospace'; ctx.fillStyle = '#475569';
     ctx.fillText('Receipt ID:', padding, y);
@@ -2766,75 +2826,115 @@ function downloadReceiptAsImage() {
 
     y += 18;
     ctx.textAlign = 'left'; ctx.font = '500 11px Manrope, monospace'; ctx.fillStyle = '#475569';
-    ctx.fillText('Customer:', padding, y);
+    ctx.fillText('Cashier:', padding, y);
+    ctx.textAlign = 'right'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#0f172a';
+    ctx.fillText('Admin Ledger', width - padding, y);
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '500 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Customer Name:', padding, y);
     ctx.textAlign = 'right'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#0f172a';
     ctx.fillText(order.customerName, width - padding, y);
 
-    y += 12;
+    y += 14;
     ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
 
     // Items Section Header
     y += 20;
     ctx.textAlign = 'left'; ctx.font = '900 10px Manrope, monospace'; ctx.fillStyle = '#94a3b8';
-    ctx.fillText('LINE ITEMS', padding, y);
+    ctx.fillText('PRODUCT LIST', padding, y);
 
     items.forEach(i => {
-        y += 20;
+        y += 10;
         const lineOrig = i.qty * (i.sellPrice || 0);
-        const itemDiscount = lineOrig - (i.effectiveTotal || lineOrig);
+        const img = imageMap[i.name];
 
-        ctx.textAlign = 'left'; ctx.font = '700 12px Manrope, monospace'; ctx.fillStyle = '#0f172a';
-        ctx.fillText(i.name, padding, y);
-
-        ctx.textAlign = 'right'; ctx.font = '600 12px Manrope, monospace'; ctx.fillStyle = '#0f172a';
-        ctx.fillText(`₱${lineOrig.toFixed(2)}`, width - padding, y);
-
-        y += 14;
-        ctx.textAlign = 'left'; ctx.font = '500 10px Manrope, monospace'; ctx.fillStyle = '#64748b';
-        ctx.fillText(`${i.qty} pcs x ₱${(i.sellPrice || 0).toFixed(2)}`, padding, y);
-
-        if (itemDiscount > 0.01) {
-            ctx.textAlign = 'right'; ctx.font = '700 10px Manrope, monospace'; ctx.fillStyle = '#059669';
-            ctx.fillText(`-₱${itemDiscount.toFixed(2)}`, width - padding, y);
+        if (img) {
+            ctx.save();
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(padding, y, 32, 32, 8);
+            else ctx.rect(padding, y, 32, 32);
+            ctx.clip();
+            ctx.drawImage(img, padding, y, 32, 32);
+            ctx.restore();
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(padding, y, 32, 32, 8);
+            else ctx.rect(padding, y, 32, 32);
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = '#eef2ff';
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(padding, y, 32, 32, 8);
+            else ctx.rect(padding, y, 32, 32);
+            ctx.fill();
+            ctx.fillStyle = '#4f46e5';
+            ctx.font = '900 11px Manrope, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(i.name.substring(0,2).toUpperCase(), padding + 16, y + 20);
         }
 
-        y += 6;
+        ctx.textAlign = 'left';
+        ctx.font = '700 12px Manrope, monospace';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(i.name, padding + 42, y + 14);
+
+        ctx.font = '500 10px Manrope, monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(`${i.qty} pcs x ₱${(i.sellPrice || 0).toFixed(2)}`, padding + 42, y + 28);
+
+        ctx.textAlign = 'right';
+        ctx.font = '600 12px Manrope, monospace';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(`₱${lineOrig.toFixed(2)}`, width - padding, y + 16);
+
+        y += 34;
         ctx.setLineDash([3, 3]); ctx.strokeStyle = '#f1f5f9';
         ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
         ctx.setLineDash([]);
     });
 
     // Financial Totals
-    y += 16;
+    y += 12;
     ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
 
     y += 18;
     ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
-    ctx.fillText('Original Subtotal:', padding, y);
+    ctx.fillText('Original Total:', padding, y);
     ctx.textAlign = 'right'; ctx.fillStyle = '#0f172a';
     ctx.fillText(`₱${origSubtotal.toFixed(2)}`, width - padding, y);
+
+    y += 18;
+    ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
+    ctx.fillText('Bundle Discount / Promo Discount:', padding, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#0f172a';
+    ctx.fillText(`-₱0.00`, width - padding, y);
 
     if (totalSavings > 0.01) {
         y += 18;
         ctx.textAlign = 'left'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#059669';
-        ctx.fillText('Total Promo Savings:', padding, y);
+        ctx.fillText('Total Savings:', padding, y);
         ctx.textAlign = 'right';
         ctx.fillText(`-₱${totalSavings.toFixed(2)}`, width - padding, y);
+
+        y += 20;
+        ctx.fillStyle = '#ecfdf5';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(padding, y - 12, width - (padding * 2), 24, 8);
+        else ctx.fillRect(padding, y - 12, width - (padding * 2), 24);
+        ctx.fill();
+        ctx.textAlign = 'left'; ctx.font = '800 11px Manrope, monospace'; ctx.fillStyle = '#047857';
+        ctx.fillText(`You Saved ₱${totalSavings.toFixed(2)}`, padding + 10, y + 3);
     }
 
-    y += 18;
-    ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
-    ctx.fillText('Estimated Tax (12%):', padding, y);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#0f172a';
-    ctx.fillText(`₱${tax.toFixed(2)}`, width - padding, y);
-
-    y += 20;
+    y += 24;
     ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(width - padding, y); ctx.stroke();
 
-    y += 20;
+    y += 22;
     ctx.textAlign = 'left'; ctx.font = '900 14px Manrope, monospace'; ctx.fillStyle = '#0f172a';
     ctx.fillText('Grand Total:', padding, y);
     ctx.textAlign = 'right';
@@ -2848,7 +2948,7 @@ function downloadReceiptAsImage() {
 
     y += 18;
     ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
-    ctx.fillText('Tendered Amount:', padding, y);
+    ctx.fillText('Amount Paid:', padding, y);
     ctx.textAlign = 'right'; ctx.font = '700 11px Manrope, monospace'; ctx.fillStyle = '#059669';
     ctx.fillText(`₱${paidVal.toFixed(2)}`, width - padding, y);
 
@@ -2870,7 +2970,7 @@ function downloadReceiptAsImage() {
 
     y += 18;
     ctx.textAlign = 'left'; ctx.font = '600 11px Manrope, monospace'; ctx.fillStyle = '#475569';
-    ctx.fillText('Settlement Status:', padding, y);
+    ctx.fillText('Payment Status:', padding, y);
     ctx.textAlign = 'right'; ctx.font = '900 11px Manrope, monospace'; ctx.fillStyle = '#0f172a';
     ctx.fillText(statusLine, width - padding, y);
 
