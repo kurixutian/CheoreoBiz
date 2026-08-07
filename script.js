@@ -20,6 +20,7 @@ let cart = [];
 let activityLog = [];
 let stockHistory = [];
 let bnplRecords = [];
+let cashAdjustments = []; // Isolated Manual Cash Usage Layer
 
 let currentFilter = 'all';
 let currentOrderTab = 'all';
@@ -91,6 +92,8 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeCartModal();
         toggleCalculator(false);
+        closeModal('subtract-cash-modal');
+        closeModal('cash-history-modal');
     }
 });
 
@@ -131,7 +134,7 @@ function requestUserConfirmation(title, message, proceedText, callback) {
     const proceedBtn = document.getElementById('confirm-proceed-btn');
     if (proceedBtn) {
         proceedBtn.innerText = proceedText;
-        if (proceedText === 'Clear' || proceedText === 'Delete') {
+        if (proceedText === 'Clear' || proceedText === 'Delete' || proceedText === 'Undo') {
             proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-3 rounded-full transition-all btn-transition shadow-md shadow-rose-600/20";
         } else {
             proceedBtn.className = "flex-1 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-3 rounded-full transition-all btn-transition shadow-md shadow-brand-500/20";
@@ -372,6 +375,7 @@ function saveBundles() { db.ref('bundles').set(bundles); }
 function saveActivityLog() { db.ref('activityLog').set(activityLog); }
 function saveStockHistory() { db.ref('stockHistory').set(stockHistory); }
 function saveBnpl() { db.ref('bnplRecords').set(bnplRecords); }
+function saveCashAdjustments() { db.ref('cashAdjustments').set(cashAdjustments); }
 
 // ================= FIREBASE REALTIME SYNC LISTENERS =================
 function startRealtimeSync() {
@@ -402,6 +406,13 @@ function startRealtimeSync() {
         renderBnplUI();
         renderInventoryTable();
         renderSummary();
+    });
+
+    db.ref('cashAdjustments').on('value', snapshot => {
+        const data = snapshot.val();
+        cashAdjustments = data ? Object.values(data) : [];
+        renderBnplUI();
+        renderCashAdjustmentHistory();
     });
 
     db.ref('activityLog').on('value', snapshot => { 
@@ -2563,14 +2574,145 @@ function renderBnplTable() {
     }); initIcons();
 }
 
+// ================= LIQUID CASH — MANUAL ADJUSTMENTS ENGINE =================
+function calculateLiquidCash() {
+    let pool = 0;
+    orders.forEach(o => {
+        if (o.status !== 'cancelled') pool += (o.amountPaid || 0);
+    });
+
+    let totalApPaid = 0;
+    bnplRecords.forEach(b => {
+        totalApPaid += (b.amountPaid || 0);
+    });
+
+    const systemLiquidCash = pool - totalApPaid;
+
+    let activeManualCashUsed = 0;
+    cashAdjustments.forEach(adj => {
+        if (adj.status === 'active' && adj.type === 'withdrawal') {
+            activeManualCashUsed += parseFloat(adj.amount) || 0;
+        }
+    });
+
+    const availableLiquidCash = systemLiquidCash - activeManualCashUsed;
+
+    return {
+        systemLiquidCash,
+        activeManualCashUsed,
+        availableLiquidCash
+    };
+}
+
+function openSubtractCashModal() {
+    const cashData = calculateLiquidCash();
+    const modalAvailable = document.getElementById('sub-modal-available');
+    if (modalAvailable) {
+        modalAvailable.innerText = `₱ ${cashData.availableLiquidCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    document.getElementById('cash-sub-amount').value = '';
+    document.getElementById('cash-sub-reason').value = '';
+    openModal('subtract-cash-modal');
+}
+
+function handleSubtractCashSubmit(e) {
+    e.preventDefault();
+    const amount = parseFloat(document.getElementById('cash-sub-amount').value) || 0;
+    const reason = document.getElementById('cash-sub-reason').value.trim() || 'Physical cash withdrawal';
+
+    if (amount <= 0) {
+        showToast("Please enter a withdrawal amount greater than 0", "error");
+        return;
+    }
+
+    const currentCashData = calculateLiquidCash();
+    if (amount > currentCashData.availableLiquidCash) {
+        showToast(`Cannot subtract ₱${amount.toFixed(2)}. Only ₱${currentCashData.availableLiquidCash.toFixed(2)} available.`, "error");
+        return;
+    }
+
+    const timestamp = Date.now();
+    const newAdjustment = {
+        id: 'adj-' + timestamp,
+        amount: amount,
+        type: 'withdrawal',
+        reason: reason,
+        date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        timestamp: timestamp,
+        status: 'active'
+    };
+
+    cashAdjustments.unshift(newAdjustment);
+    saveCashAdjustments();
+
+    closeModal('subtract-cash-modal');
+    renderBnplUI();
+    showToast(`Subtracted ₱${amount.toLocaleString(undefined, {minimumFractionDigits: 2})} from Available Liquid Cash`, "success");
+}
+
+function undoCashAdjustment(id) {
+    const adj = cashAdjustments.find(a => a.id === id);
+    if (!adj || adj.status === 'reversed') return;
+
+    requestUserConfirmation(
+        "Undo Cash Adjustment",
+        `Reverse the cash subtraction of ₱${adj.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}? This amount will be restored to Available Liquid Cash.`,
+        "Undo",
+        () => {
+            adj.status = 'reversed';
+            adj.reversedAt = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            saveCashAdjustments();
+            renderBnplUI();
+            renderCashAdjustmentHistory();
+            showToast(`Reversed ₱${adj.amount.toLocaleString(undefined, {minimumFractionDigits: 2})} cash adjustment`, "info");
+        }
+    );
+}
+
+function openCashAdjustmentHistoryModal() {
+    renderCashAdjustmentHistory();
+    openModal('cash-history-modal');
+}
+
+function renderCashAdjustmentHistory() {
+    const container = document.getElementById('cash-history-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (cashAdjustments.length === 0) {
+        container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs font-bold"><i data-lucide="history" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No manual cash adjustments recorded.</div>`;
+        initIcons();
+        return;
+    }
+
+    cashAdjustments.forEach(adj => {
+        const isReversed = adj.status === 'reversed';
+        container.innerHTML += `
+            <div class="flex items-center justify-between p-3.5 rounded-3xl border ${isReversed ? 'bg-slate-50 dark:bg-darkbg/40 border-slate-200 dark:border-darkborder opacity-60' : 'bg-white dark:bg-darkcard border-slate-200/80 dark:border-darkborder shadow-xs'} transition-all">
+                <div class="space-y-0.5 min-w-0 pr-2">
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono font-black text-sm ${isReversed ? 'line-through text-slate-500' : 'text-rose-600 dark:text-rose-400'}">- ₱ ${(adj.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isReversed ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'}">${isReversed ? 'Reversed' : 'Active'}</span>
+                    </div>
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">${adj.reason || 'Physical cash withdrawal'}</p>
+                    <p class="text-[10px] text-slate-400 font-semibold">${adj.date}${isReversed && adj.reversedAt ? ` • Undone on ${adj.reversedAt}` : ''}</p>
+                </div>
+                ${!isReversed ? `
+                    <button onclick="undoCashAdjustment('${adj.id}')" class="px-3 py-1.5 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-full border border-rose-200 dark:border-rose-800/30 btn-transition flex-shrink-0 flex items-center gap-1">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Undo
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    });
+    initIcons();
+}
+
 function renderBnplUI() {
     renderBnplTable();
     renderBatchMatrixTable();
 
-    let pool = 0;
-    orders.forEach(o => {
-        if(o.status !== 'cancelled') pool += (o.amountPaid || 0);
-    });
+    const cashData = calculateLiquidCash();
 
     let totalApPaid = 0;
     let totalApUnpaid = 0;
@@ -2580,13 +2722,17 @@ function renderBnplUI() {
         totalApUnpaid += (b.totalAmount - (b.amountPaid || 0));
     });
 
-    const liquidSafe = pool - totalApPaid;
-    
+    const availEl = document.getElementById('cashflow-available-liquid');
+    const sysEl = document.getElementById('cashflow-system-liquid');
+    const usedEl = document.getElementById('cashflow-manual-used');
     const poolEl = document.getElementById('cashflow-liquid-pool');
     const unpaidEl = document.getElementById('cashflow-unpaid-bnpl');
     const paidEl = document.getElementById('cashflow-paid-bnpl');
 
-    if(poolEl) poolEl.innerText = liquidSafe.toLocaleString(undefined, {minimumFractionDigits: 2});
+    if(availEl) availEl.innerText = cashData.availableLiquidCash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if(sysEl) sysEl.innerText = cashData.systemLiquidCash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if(usedEl) usedEl.innerText = cashData.activeManualCashUsed.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if(poolEl) poolEl.innerText = cashData.systemLiquidCash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     if(unpaidEl) unpaidEl.innerText = totalApUnpaid.toLocaleString(undefined, {minimumFractionDigits: 2});
     if(paidEl) paidEl.innerText = totalApPaid.toLocaleString(undefined, {minimumFractionDigits: 2});
 }
@@ -3013,7 +3159,7 @@ function exportToCSV() {
 }
 
 function exportData() {
-    const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ inventory, orders, bundles, stockHistory, activityLog, bnplRecords }, null, 2));
+    const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ inventory, orders, bundles, stockHistory, activityLog, bnplRecords, cashAdjustments }, null, 2));
     a.download = `cheoreobiz_backup_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.remove(); showToast("Database backup downloaded", "success");
 }
 
