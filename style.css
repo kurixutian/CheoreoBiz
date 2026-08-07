@@ -225,6 +225,12 @@ button i[data-lucide] {
     }
 }
 
+/* Ensure Modals appear above bottom navigation and floating controls */
+#subtract-cash-modal,
+#cash-history-modal {
+    z-index: 80 !important;
+}
+
 /* --------------------------------------------------------------------------
    7. Data Tables, Responsive Touch Scrolls & Sorting Badges
    -------------------------------------------------------------------------- */
