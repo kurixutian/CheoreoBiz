@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#059669">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CheoreoBiz">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="./icons/icon-512.png">
     <title>CheoreoBiz Ledger — Enterprise Modern Cloud POS & ERP</title>
     
     <!-- Fonts -->
@@ -23,13 +30,13 @@
                     },
                     colors: {
                         brand: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            200: '#c7d2fe',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            900: '#312e81',
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b',
                         },
                         darkbg: '#090d16',
                         darkcard: '#111827',
@@ -40,7 +47,7 @@
                     boxShadow: {
                         'sleek': '0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03)',
                         'sleek-hover': '0 12px 30px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04)',
-                        'glow': '0 0 25px -5px rgba(99, 102, 241, 0.25)',
+                        'glow': '0 0 25px -5px rgba(16, 185, 129, 0.2)',
                     },
                     borderRadius: {
                         'xl': '0.875rem',
@@ -72,9 +79,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-50/80 dark:bg-darkbg text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200 antialiased selection:bg-brand-500/20 selection:text-brand-600 font-sans pb-24 sm:pb-0 overflow-x-hidden">
+<body class="bg-slate-50/80 dark:bg-darkbg text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200 antialiased selection:bg-brand-500/20 selection:text-brand-600 font-sans sm:pb-0 overflow-x-hidden">
 
     <!-- Global Toast Notification Engine -->
     <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
@@ -82,7 +89,7 @@
     <!-- Authentication Screen Overlay -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 dark:bg-darkbg/90 glass-panel p-4 backdrop-blur-xl">
         <div class="bg-white dark:bg-darkcard p-8 sm:p-10 rounded-4xl border border-slate-200/80 dark:border-darkborder max-w-md w-full shadow-2xl animate-slide-up space-y-8 relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-500 via-indigo-500 to-purple-600"></div>
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-500 via-emerald-500 to-emerald-700"></div>
             
             <div class="text-center space-y-3">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 mb-1 border border-brand-100 dark:border-brand-500/20 shadow-xs">
@@ -212,7 +219,7 @@
                         <i data-lucide="moon" id="theme-icon" class="w-4 h-4"></i>
                     </button>
 
-                    <button onclick="exportData()" class="p-2 sm:p-2.5 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10 rounded-xl transition-all btn-transition flex items-center justify-center" title="Export Backup JSON">
+                    <button onclick="exportData()" class="p-2 sm:p-2.5 text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10 rounded-xl transition-all btn-transition flex items-center justify-center" title="Export Backup JSON">
                         <i data-lucide="download" class="w-4 h-4"></i>
                     </button>
 
@@ -446,7 +453,7 @@
                                 </button>
                             </div>
                             <div class="w-full overflow-x-auto custom-scrollbar flex-1">
-                                <table class="w-full min-w-[700px] divide-y divide-slate-200 dark:divide-darkborder">
+                                <table class="w-full divide-y divide-slate-200 dark:divide-darkborder ledger-inventory-table">
                                     <thead class="bg-slate-50/80 dark:bg-darkbg/80 backdrop-blur-md">
                                         <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase whitespace-nowrap select-none">
                                             <th onclick="toggleInventorySort('name', event)" class="py-3.5 px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -540,7 +547,7 @@
                                 </h2>
                             </div>
                             <div class="w-full overflow-x-auto custom-scrollbar flex-1">
-                                <table class="w-full min-w-[650px] divide-y divide-slate-200 dark:divide-darkborder">
+                                <table class="w-full divide-y divide-slate-200 dark:divide-darkborder ledger-bundles-table">
                                     <thead class="bg-slate-50/80 dark:bg-darkbg/80">
                                         <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase select-none">
                                             <th onclick="toggleBundleSort('name', event)" class="py-3.5 px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -566,11 +573,11 @@
                 </section>
 
                 <!-- SECTION 4: POINT OF SALE (POS) -->
-                <section data-tab-content="orders" class="hidden space-y-6 pb-24 xl:pb-0 relative">
+                <section data-tab-content="orders" class="hidden space-y-6 relative">
 
                     <!-- Mobile Floating Action Cart Trigger -->
                     <div id="mobile-cart-fab-container" class="fixed bottom-20 right-6 z-40 xl:hidden block">
-                        <button onclick="openCartModal()" class="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/30 btn-transition relative">
+                        <button onclick="openCartModal()" class="w-14 h-14 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/30 btn-transition relative">
                             <i data-lucide="shopping-bag" class="w-6 h-6"></i>
                             <span id="mobile-fab-badge-count" class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black rounded-full h-5 w-5 hidden items-center justify-center border-2 border-white dark:border-darkcard shadow-md">0</span>
                         </button>
@@ -709,14 +716,14 @@
                                         <option value="50">50</option>
                                     </select>
                                 </div>
-                                <button onclick="exportToCSV()" class="btn-transition flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-500/20 hover:bg-indigo-200/80 px-3.5 py-1.5 rounded-full border border-indigo-200 dark:border-indigo-800/30 shadow-xs">
+                                <button onclick="exportToCSV()" class="btn-transition flex items-center gap-1.5 text-xs font-bold text-brand-700 dark:text-emerald-300 bg-brand-100/70 dark:bg-brand-500/20 hover:bg-brand-200/80 px-3.5 py-1.5 rounded-full border border-brand-200 dark:border-emerald-800/30 shadow-xs">
                                     <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Export CSV
                                 </button>
                             </div>
                         </div>
 
-                        <div class="w-full overflow-x-auto custom-scrollbar min-h-[300px]">
-                            <table class="w-full min-w-[750px] divide-y divide-slate-200 dark:divide-darkborder">
+                        <div class="w-full overflow-x-auto custom-scrollbar">
+                            <table class="w-full divide-y divide-slate-200 dark:divide-darkborder ledger-orders-table">
                                 <thead class="bg-slate-50/80 dark:bg-darkbg/80">
                                     <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase whitespace-nowrap select-none">
                                         <th onclick="toggleOrderSort('customer', event)" class="py-3.5 px-4 sm:px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -763,7 +770,7 @@
                 <section data-tab-content="bnpl" class="hidden space-y-6 animate-fade-in">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <!-- Liquid Cash Adjustment Main Display Card -->
-                        <div class="bg-gradient-to-br from-brand-600 via-indigo-700 to-purple-800 text-white p-5 rounded-4xl border border-brand-400/30 shadow-md flex flex-col justify-between transition-all hover:shadow-glow relative overflow-hidden">
+                        <div class="bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-5 rounded-4xl border border-emerald-600/30 shadow-md flex flex-col justify-between transition-all hover:shadow-glow relative overflow-hidden">
                             <div class="flex justify-between items-start">
                                 <p class="text-[10px] font-black uppercase tracking-widest opacity-80">Available Liquid Cash</p>
                                 <div class="bg-white/20 backdrop-blur-md p-2 rounded-2xl"><i data-lucide="wallet" class="w-4 h-4"></i></div>
@@ -921,7 +928,7 @@
                             </div>
 
                             <div class="w-full overflow-x-auto custom-scrollbar flex-1">
-                                <table class="w-full min-w-[650px] divide-y divide-slate-200 dark:divide-darkborder">
+                                <table class="w-full divide-y divide-slate-200 dark:divide-darkborder ledger-bnpl-table">
                                     <thead class="bg-slate-50/80 dark:bg-darkbg/80">
                                         <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase whitespace-nowrap select-none">
                                             <th onclick="toggleBnplSort('supplier', event)" class="py-3 px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -968,7 +975,7 @@
                             </h2>
                         </div>
                         <div class="w-full overflow-x-auto custom-scrollbar">
-                            <table class="w-full min-w-[600px] divide-y divide-slate-200 dark:divide-darkborder">
+                            <table class="w-full divide-y divide-slate-200 dark:divide-darkborder ledger-matrix-table">
                                 <thead class="bg-slate-50/80 dark:bg-darkbg/80">
                                     <tr class="text-slate-400 text-[10px] font-black tracking-widest text-left uppercase">
                                         <th class="py-3 px-5">Item Name</th>
@@ -1041,7 +1048,7 @@
                 <button type="button" onclick="closeModal('details-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 p-2 rounded-full shadow-xs border border-slate-200 dark:border-slate-700 btn-transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="w-full overflow-x-auto flex-1 custom-scrollbar">
-                <table class="w-full min-w-[500px] divide-y divide-slate-200 dark:divide-darkborder">
+                <table class="w-full divide-y divide-slate-200 dark:divide-darkborder">
                     <thead class="bg-slate-50 dark:bg-darkbg/80 sticky top-0 z-10 backdrop-blur-md" id="details-modal-head"></thead>
                     <tbody id="details-modal-list" class="divide-y divide-slate-100 dark:divide-darkborder/60 text-xs sm:text-sm"></tbody>
                 </table>
@@ -1058,7 +1065,7 @@
                 <button type="button" onclick="closeModal('stock-history-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 p-2 rounded-full shadow-xs border border-slate-200 dark:border-slate-700 btn-transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="w-full overflow-x-auto flex-1 custom-scrollbar">
-                <table class="w-full min-w-[550px] divide-y divide-slate-200 dark:divide-darkborder">
+                <table class="w-full divide-y divide-slate-200 dark:divide-darkborder">
                     <thead class="bg-slate-50 dark:bg-darkbg/80 sticky top-0 z-10 backdrop-blur-md">
                         <tr class="text-slate-400 text-[10px] font-black tracking-wider text-left uppercase">
                             <th class="py-3.5 px-5">Date & Time</th>
@@ -1083,7 +1090,7 @@
                 <button type="button" onclick="closeModal('dash-products-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 p-2 rounded-full shadow-xs border border-slate-200 dark:border-slate-700 btn-transition"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="w-full overflow-x-auto flex-1 custom-scrollbar">
-                <table class="w-full min-w-[450px] divide-y divide-slate-200 dark:divide-darkborder">
+                <table class="w-full divide-y divide-slate-200 dark:divide-darkborder">
                     <thead class="bg-slate-50 dark:bg-darkbg/80 sticky top-0 z-10 backdrop-blur-md">
                         <tr class="text-slate-400 text-[10px] font-black tracking-wider text-left uppercase">
                             <th class="py-3.5 px-5">Product Title</th>
@@ -1218,7 +1225,7 @@
                 <div class="hidden" id="receipt-text"></div>
 
                 <div class="grid grid-cols-2 gap-3 pt-1">
-                    <button onclick="downloadReceiptAsImage()" class="btn-transition bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-3.5 px-3 rounded-full shadow-md flex items-center justify-center gap-1.5">
+                    <button onclick="downloadReceiptAsImage()" class="btn-transition bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold py-3.5 px-3 rounded-full shadow-md flex items-center justify-center gap-1.5">
                         <i data-lucide="image-down" class="w-4 h-4"></i> Save PNG
                     </button>
                     <button onclick="copyReceiptToClipboard()" class="btn-transition bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-3.5 px-3 rounded-full shadow-xs flex items-center justify-center gap-1.5">
@@ -1333,5 +1340,10 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+        }
+    </script>
 </body>
 </html>

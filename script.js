@@ -161,6 +161,43 @@ function initIcons() {
     }
 }
 
+function initResponsiveTables() {
+    document.querySelectorAll('table').forEach(table => {
+        const body = table.tBodies[0];
+        if (!body) return;
+        const labelRows = () => {
+            const headers = [...table.querySelectorAll('thead th')].map(cell => cell.innerText.trim());
+            [...body.rows].forEach(row => [...row.cells].forEach((cell, index) => {
+                if (cell.tagName === 'TD' && !cell.hasAttribute('colspan') && headers[index]) cell.dataset.label = headers[index];
+            }));
+        };
+        new MutationObserver(labelRows).observe(table, { childList: true, subtree: true });
+        labelRows();
+    });
+}
+
+initResponsiveTables();
+
+function initScrollAwareCart() {
+    const main = document.querySelector('#app-wrapper main');
+    const cartButton = document.getElementById('mobile-cart-fab-container');
+    if (!main || !cartButton) return;
+    let previousScroll = main.scrollTop;
+    const setHidden = hidden => {
+        cartButton.classList.toggle('is-scroll-hidden', hidden);
+        cartButton.inert = hidden;
+        cartButton.setAttribute('aria-hidden', String(hidden));
+    };
+    main.addEventListener('scroll', () => {
+        const currentScroll = main.scrollTop;
+        if (currentScroll < 64 || currentScroll < previousScroll - 6) setHidden(false);
+        else if (currentScroll > previousScroll + 6) setHidden(true);
+        previousScroll = currentScroll;
+    }, { passive: true });
+}
+
+initScrollAwareCart();
+
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -486,6 +523,14 @@ function updateThemeIcons() {
 }
 
 function switchTab(tabId) {
+    const main = document.querySelector('#app-wrapper main');
+    if (main) main.scrollTop = 0;
+    const cartButton = document.getElementById('mobile-cart-fab-container');
+    if (cartButton) {
+        cartButton.classList.remove('is-scroll-hidden');
+        cartButton.inert = false;
+        cartButton.setAttribute('aria-hidden', 'false');
+    }
     document.querySelectorAll('[data-tab-content]').forEach(sec => {
         if(sec.dataset.tabContent === tabId) { 
             sec.classList.remove('hidden'); 
