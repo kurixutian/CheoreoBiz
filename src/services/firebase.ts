@@ -20,6 +20,9 @@ let authInstance: any = null;
 
 export function getFirebaseServices() {
   if (typeof window !== 'undefined' && window.firebase) {
+    if (!FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.databaseURL) {
+      return { db: null, auth: null };
+    }
     if (!window.firebase.apps || window.firebase.apps.length === 0) {
       window.firebase.initializeApp(FIREBASE_CONFIG);
     }
