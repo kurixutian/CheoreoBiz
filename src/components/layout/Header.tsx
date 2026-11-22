@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
 }) => {
   return (
-    <header className="bg-white dark:bg-darkcard border-b border-slate-200 dark:border-darkborder sticky top-0 z-40 transition-colors flex-none">
+    <header className="bg-white/95 dark:bg-darkcard/95 backdrop-blur-md border-b border-[#E2E4E9] dark:border-darkborder sticky top-0 z-40 transition-colors flex-none">
       <div className="container mx-auto px-3 sm:px-6 lg:px-8 max-w-[1440px] flex flex-row justify-between items-center py-2.5 sm:py-3">
         <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
           <div className="p-2 bg-brand-600 rounded-lg text-white flex-shrink-0">
@@ -99,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Primary Header Navigation Tabs */}
-      <nav className="hidden sm:flex container mx-auto px-4 lg:px-8 max-w-[1440px] gap-1 overflow-x-auto no-scrollbar pb-2 pt-1">
+      <nav className="hidden sm:flex container mx-auto px-4 lg:px-8 max-w-[1440px] gap-1 overflow-x-auto no-scrollbar pt-1">
         {NAV_TABS.map(({ id, label, Icon }) => {
           const isActive = activeTab === id;
           return (
@@ -110,9 +110,9 @@ export const Header: React.FC<HeaderProps> = ({
               data-tab-btn={id}
               className={`${
                 isActive
-                  ? 'tab-active bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800/40 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 border border-transparent'
-              } flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40`}
+                  ? 'tab-active text-brand-700 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-b-2 border-transparent'
+              } flex-shrink-0 flex items-center gap-2 px-3 py-2 font-semibold text-xs transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40`}
             >
               <Icon className="w-4 h-4" /> {label}
             </button>

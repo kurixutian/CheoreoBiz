@@ -74,9 +74,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   return (
     <div
       id="auth-screen"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-100 dark:bg-darkbg p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#F7F7F5] dark:bg-darkbg p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-darkcard p-8 sm:p-10 rounded-2xl border border-slate-200 dark:border-darkborder max-w-md w-full animate-slide-up space-y-6 relative overflow-hidden my-auto">
+      <div className="bg-white dark:bg-darkcard p-8 sm:p-10 rounded-xl border border-[#E2E4E9] dark:border-darkborder max-w-md w-full animate-slide-up space-y-6 relative overflow-hidden my-auto">
         <div className="absolute top-0 left-0 w-full h-1 bg-brand-600" />
 
         <div className="text-center space-y-2">

@@ -20,7 +20,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, onS
     <nav
       id="mobile-bottom-nav"
       aria-label="Mobile Navigation"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-darkcard border-t border-slate-200 dark:border-darkborder flex justify-around items-center py-2 px-1 sm:hidden transition-transform duration-300"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-darkcard/95 backdrop-blur-md border-t border-[#E2E4E9] dark:border-darkborder flex justify-around items-center py-2 px-1 sm:hidden transition-transform duration-300"
     >
       {MOBILE_TABS.map(({ id, label, Icon }) => {
         const isActive = activeTab === id;
