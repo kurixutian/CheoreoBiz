@@ -1262,7 +1262,12 @@ export default function App() {
           onPasswordReset={handlePasswordReset}
         />
       ) : (
-        <div id="app-container" className="flex flex-col flex-1 h-full overflow-hidden">
+        <div
+          id="app-container"
+          ref={mainScrollRef}
+          onScroll={handleMainScroll}
+          className="flex flex-col flex-1 h-full overflow-y-auto"
+        >
           <Header
             activeTab={activeTab}
             isDark={isDark}
@@ -1273,11 +1278,7 @@ export default function App() {
             onLogout={handleLogout}
           />
 
-          <main
-            ref={mainScrollRef}
-            onScroll={handleMainScroll}
-            className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-28 md:pb-12 max-w-[1600px] w-full mx-auto"
-          >
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-28 md:pb-12 max-w-[1600px] w-full mx-auto">
             {activeTab === 'dashboard' && (
               <DashboardView
                 timeframe={timeframe}
