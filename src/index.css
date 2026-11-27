@@ -189,21 +189,10 @@ button svg {
 }
 
 /* --------------------------------------------------------------------------
-   5. Active Header Tab Pills
+   5. Active Header Tab State
    -------------------------------------------------------------------------- */
 .tab-active {
-    color: #047857;
-    background-color: #ecfdf5;
-    border-color: transparent;
-    font-weight: 700;
-    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.12);
-}
-
-.dark .tab-active {
-    color: #34d399;
-    background-color: rgba(16, 185, 129, 0.16);
-    border-color: transparent;
-    box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
+    font-weight: 600;
 }
 
 /* --------------------------------------------------------------------------
@@ -215,29 +204,7 @@ button svg {
         bottom: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        height: 64px !important;
-        background-color: rgba(255, 255, 255, 0.95) !important;
-        border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
-        box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.05) !important;
         z-index: 50 !important;
-    }
-
-    .dark #mobile-bottom-nav {
-        background-color: rgba(17, 24, 39, 0.95) !important;
-        border-top: 1px solid rgba(30, 41, 59, 0.8) !important;
-        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4) !important;
-    }
-
-    #mobile-bottom-nav button.tab-active {
-        color: #047857;
-        background-color: #ecfdf5;
-        border-radius: 12px;
-    }
-
-    .dark #mobile-bottom-nav button.tab-active {
-        color: #34d399;
-        background-color: rgba(16, 185, 129, 0.18);
-        border-radius: 12px;
     }
 
     #mobile-cart-fab-container {
@@ -277,20 +244,20 @@ table { width: 100%; min-width: 0; }
 @container (max-width: 699px) {
     table { display: block; width: 100%; }
     table thead { display: none; }
-    table tbody { display: grid; gap: 8px; }
+    table tbody { display: grid; gap: 8px; padding: 8px; }
     table tbody tr {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: center;
         min-height: 72px;
-        padding: 8px 12px;
-        border: 1px solid rgba(15, 23, 42, .1);
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
-        background: white;
+        background: #ffffff;
     }
     .dark table tbody tr {
-        background: #111827;
-        border-color: rgba(255, 255, 255, .08);
+        background: #0d0e11;
+        border-color: #22252c;
     }
     table tbody td {
         min-width: 0 !important;
@@ -302,9 +269,9 @@ table { width: 100%; min-width: 0; }
         content: attr(data-label);
         display: block;
         margin-bottom: 2px;
-        color: #64748b;
+        color: #475569;
         font-size: 10px;
-        font-weight: 700;
+        font-weight: 600;
         white-space: nowrap;
     }
     .dark table tbody td::before { color: #94a3b8; }
@@ -401,11 +368,11 @@ tbody tr {
 }
 
 tbody tr:nth-child(even) {
-    background-color: rgba(248, 250, 252, 0.4);
+    background-color: rgba(248, 250, 252, 0.55);
 }
 
 .dark tbody tr:nth-child(even) {
-    background-color: rgba(17, 24, 39, 0.35);
+    background-color: rgba(255, 255, 255, 0.02);
 }
 
 .truncate-cell {
@@ -417,18 +384,18 @@ tbody tr:nth-child(even) {
 /* Multi-Column Sort Priority Indicator Badges */
 .sort-priority-badge {
     font-size: 9px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 1px 5px;
     border-radius: 9999px;
-    background-color: rgba(5, 150, 105, 0.12);
-    color: #047857;
+    background-color: rgba(29, 78, 216, 0.12);
+    color: #1d4ed8;
     margin-left: 3px;
     vertical-align: middle;
 }
 
 .dark .sort-priority-badge {
-    background-color: rgba(16, 185, 129, 0.18);
-    color: #34d399;
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
 }
 
 /* --------------------------------------------------------------------------

@@ -15,12 +15,12 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts }) => {
       {toasts.map((toast) => {
         const bgClass =
           toast.type === 'success'
-            ? 'bg-emerald-600 text-white'
+            ? 'bg-emerald-700 dark:bg-emerald-600 text-white border-emerald-500/30'
             : toast.type === 'error'
-            ? 'bg-rose-600 text-white'
+            ? 'bg-rose-700 dark:bg-rose-600 text-white border-rose-500/30'
             : toast.type === 'info'
-            ? 'bg-brand-600 text-white'
-            : 'bg-slate-900 dark:bg-slate-800 text-white';
+            ? 'bg-brand-600 text-white border-brand-400/30'
+            : 'bg-slate-900 dark:bg-darksurface text-white border-white/10';
         const Icon =
           toast.type === 'success'
             ? CheckCircle2
@@ -31,9 +31,9 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts }) => {
         return (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-5 py-3.5 rounded-full shadow-2xl text-xs sm:text-sm font-bold transition-all duration-300 animate-slide-up ${bgClass} border border-white/10 backdrop-blur-md z-[100]`}
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold transition-all duration-200 animate-slide-up border backdrop-blur-md z-[100] ${bgClass}`}
           >
-            <Icon className="w-5 h-5 flex-shrink-0" />
+            <Icon className="w-4 h-4 flex-shrink-0" />
             <span>{toast.message}</span>
           </div>
         );

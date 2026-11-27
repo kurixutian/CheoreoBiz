@@ -1,8 +1,9 @@
 import React from 'react';
-import { Receipt, X, Download, Copy } from 'lucide-react';
+import { Receipt, Download, Copy } from 'lucide-react';
 import { InventoryItem, Order } from '../../types';
 import { getOrderItems } from '../../services/calculations';
 import { formatRawReceiptText, renderAndDownloadReceiptImage } from '../../services/exportReceipt';
+import { ModalShell } from '../common/ModalShell';
 
 interface ReceiptModalProps {
   order: Order | null;
@@ -46,35 +47,34 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-900/70 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="receipt-modal-title"
-        className="bg-white dark:bg-darkcard rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-darkborder animate-scale-in"
-      >
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-darkborder flex justify-between items-center bg-slate-50 dark:bg-darksurface">
-          <div className="flex items-center space-x-2">
-            <Receipt className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-            <h3 id="receipt-modal-title" className="text-base font-extrabold text-slate-900 dark:text-white">
-              Digital Sales Receipt
-            </h3>
-          </div>
+    <ModalShell
+      title="Digital Sales Receipt"
+      titleId="receipt-modal-title"
+      icon={<Receipt className="w-5 h-5" />}
+      iconClassName="bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400"
+      maxWidthClass="max-w-md"
+      zIndexClass="z-[60]"
+      onClose={onClose}
+      footer={
+        <div className="grid grid-cols-2 gap-2.5">
           <button
-            onClick={onClose}
-            aria-label="Close modal"
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-white dark:bg-darkcard p-1.5 rounded-lg border border-slate-200 dark:border-darkborder shadow-xs transition-colors"
+            type="button"
+            onClick={handleSavePng}
+            className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
           >
-            <X className="w-4 h-4" />
+            <Download className="w-4 h-4" /> Save PNG
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyText}
+            className="px-4 py-2.5 bg-white dark:bg-darksurface border border-slate-200 dark:border-darkborder hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+          >
+            <Copy className="w-4 h-4" /> Copy Raw Text
           </button>
         </div>
-
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-100/70 dark:bg-darkbg flex justify-center">
+      }
+    >
+      <div className="p-5 sm:p-6 bg-slate-100/80 dark:bg-darkbg flex justify-center">
           <div
             id="receipt-render-node"
             className="bg-white text-slate-900 p-6 rounded-2xl shadow-md border border-slate-200 w-full max-w-xs font-mono text-xs space-y-4 tabular-nums"
@@ -164,29 +164,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
             </div>
 
-            <div className="text-center pt-4 border-t border-dashed border-slate-300 text-[10px] text-slate-400">
+            <div className="text-center pt-4 border-t border-dashed border-slate-300 text-[10px] text-slate-500">
               Thank you for your business!
             </div>
           </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-darkborder bg-white dark:bg-darkcard grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={handleSavePng}
-            className="px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold transition-all shadow-sm flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-4 h-4" /> Save PNG
-          </button>
-          <button
-            type="button"
-            onClick={handleCopyText}
-            className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-          >
-            <Copy className="w-4 h-4" /> Copy Raw Text
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 };

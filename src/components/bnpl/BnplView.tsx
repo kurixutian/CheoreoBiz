@@ -1,11 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Wallet,
   MinusCircle,
   History,
-  Banknote,
-  AlertCircle,
-  CheckCircle,
   Truck,
   ChevronDown,
   FilePlus,
@@ -37,6 +33,7 @@ import {
   getOrderItems,
 } from '../../services/calculations';
 import { SortIndicator } from '../common/SortIndicator';
+import { ViewHeader } from '../common/ViewHeader';
 
 interface BnplViewProps {
   inventory: InventoryItem[];
@@ -232,82 +229,77 @@ export const BnplView: React.FC<BnplViewProps> = ({
 
   return (
     <section data-tab-content="bnpl" className="space-y-6 animate-fade-in block">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Liquid Cash Adjustment Main Display Card */}
-        <div className="bg-emerald-900 dark:bg-emerald-950 text-white p-5 rounded-2xl border border-emerald-700/40 shadow-md flex flex-col justify-between transition-all relative overflow-hidden min-w-0">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-semibold opacity-90">
-              Available Liquid Cash
-            </p>
-            <div className="bg-white/15 p-2 rounded-xl">
-              <Wallet className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums mt-2 whitespace-nowrap truncate">
-              ₱{' '}
-              <span id="cashflow-available-liquid">
-                {cashData.availableLiquidCash.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+      <ViewHeader title="Supplier Accounts Payable">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={onOpenSubtractCashModal}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white dark:bg-darkcard border border-slate-200 dark:border-darkborder hover:bg-slate-50 dark:hover:bg-darksurface text-slate-800 dark:text-slate-100 text-xs font-semibold rounded-xl transition-colors btn-transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+          >
+            <MinusCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+            <span>Use / Subtract Cash</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenCashHistoryModal}
+            aria-label="View Cash Adjustment History"
+            title="View Cash Adjustment History"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-darkcard border border-slate-200 dark:border-darkborder hover:bg-slate-50 dark:hover:bg-darksurface text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-colors btn-transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden sm:inline">Cash Log</span>
+          </button>
+        </div>
+      </ViewHeader>
+
+      {/* Divided Financial Strip */}
+      <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 sm:divide-x divide-slate-200 dark:divide-darkborder overflow-hidden">
+        <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+            Available liquid cash
+          </span>
+          <p className="mt-2 text-xl sm:text-2xl font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400 tracking-tight whitespace-nowrap truncate">
+            ₱{' '}
+            <span id="cashflow-available-liquid">
+              {cashData.availableLiquidCash.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          </p>
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-darkborder text-[11px] font-medium space-y-0.5 text-slate-600 dark:text-slate-400">
+            <div className="flex justify-between">
+              <span>System cash</span>
+              <span className="font-mono font-semibold tabular-nums text-slate-800 dark:text-slate-200">
+                ₱{' '}
+                <span id="cashflow-system-liquid">
+                  {cashData.systemLiquidCash.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
               </span>
-            </p>
-            <div className="text-xs opacity-85 mt-1 font-medium space-y-0.5">
-              <div className="flex justify-between">
-                <span>System Cash:</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  ₱{' '}
-                  <span id="cashflow-system-liquid">
-                    {cashData.systemLiquidCash.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </span>
-              </div>
-              <div className="flex justify-between text-rose-200">
-                <span>Manual Cash Used:</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  - ₱{' '}
-                  <span id="cashflow-manual-used">
-                    {cashData.activeManualCashUsed.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </span>
-              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/10">
-            <button
-              onClick={onOpenSubtractCashModal}
-              className="flex-1 bg-white hover:bg-slate-100 text-brand-900 text-xs font-bold py-2 px-3 rounded-lg transition-all shadow-xs flex items-center justify-center gap-1 btn-transition"
-            >
-              <MinusCircle className="w-3.5 h-3.5 text-rose-600" /> Use / Subtract
-            </button>
-            <button
-              onClick={onOpenCashHistoryModal}
-              aria-label="View Cash Adjustment History"
-              className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-all flex items-center justify-center btn-transition"
-              title="View Cash Adjustment History"
-            >
-              <History className="w-4 h-4" />
-            </button>
+            <div className="flex justify-between text-rose-700 dark:text-rose-400">
+              <span>Manual used</span>
+              <span className="font-mono font-semibold tabular-nums">
+                - ₱{' '}
+                <span id="cashflow-manual-used">
+                  {cashData.activeManualCashUsed.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-darkcard p-5 rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek flex flex-col justify-between min-w-0">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Safe Liquid Capital
-            </p>
-            <div className="bg-brand-50 dark:bg-brand-500/10 p-2 rounded-xl">
-              <Banknote className="w-4 h-4 text-brand-500" />
-            </div>
-          </div>
-          <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-2 whitespace-nowrap truncate">
+        <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+            Safe liquid capital
+          </span>
+          <p className="mt-2 text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white tracking-tight whitespace-nowrap truncate">
             ₱{' '}
             <span id="cashflow-liquid-pool">
               {cashData.systemLiquidCash.toLocaleString(undefined, {
@@ -316,21 +308,16 @@ export const BnplView: React.FC<BnplViewProps> = ({
               })}
             </span>
           </p>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
-            (POS Revenue Pool − Paid Out AP Invoices)
-          </p>
+          <span className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+            POS revenue pool minus paid AP
+          </span>
         </div>
 
-        <div className="bg-white dark:bg-darkcard p-5 rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek flex flex-col justify-between min-w-0">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Unpaid AP Dues
-            </p>
-            <div className="bg-amber-50 dark:bg-amber-500/10 p-2 rounded-xl">
-              <AlertCircle className="w-4 h-4 text-amber-500" />
-            </div>
-          </div>
-          <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-2 whitespace-nowrap truncate">
+        <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+            Unpaid AP dues
+          </span>
+          <p className="mt-2 text-xl sm:text-2xl font-bold font-mono tabular-nums text-amber-700 dark:text-amber-400 tracking-tight whitespace-nowrap truncate">
             ₱{' '}
             <span id="cashflow-unpaid-bnpl">
               {cashData.totalApUnpaid.toLocaleString(undefined, {
@@ -338,21 +325,16 @@ export const BnplView: React.FC<BnplViewProps> = ({
               })}
             </span>
           </p>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
+          <span className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
             Pending accounts payable balances
-          </p>
+          </span>
         </div>
 
-        <div className="bg-white dark:bg-darkcard p-5 rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek flex flex-col justify-between min-w-0">
-          <div className="flex justify-between items-start">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Settled AP Invoices
-            </p>
-            <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-xl">
-              <CheckCircle className="w-4 h-4 text-emerald-500" />
-            </div>
-          </div>
-          <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-2 whitespace-nowrap truncate">
+        <div className="p-4 sm:p-5 flex flex-col justify-between min-w-0">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+            Settled AP invoices
+          </span>
+          <p className="mt-2 text-xl sm:text-2xl font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400 tracking-tight whitespace-nowrap truncate">
             ₱{' '}
             <span id="cashflow-paid-bnpl">
               {cashData.totalApPaid.toLocaleString(undefined, {
@@ -360,23 +342,23 @@ export const BnplView: React.FC<BnplViewProps> = ({
               })}
             </span>
           </p>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
-            Cumulative historical supplier payouts
-          </p>
+          <span className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+            Cumulative supplier payouts
+          </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <details
           id="bnpl-form-container"
-          className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek xl:col-span-1 group"
+          className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder xl:col-span-1 group overflow-hidden"
           open
         >
-          <summary className="p-5 border-b border-slate-200/80 dark:border-darkborder flex justify-between items-center cursor-pointer select-none focus:outline-none">
-            <h2 className="text-sm font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
-              <Truck className="w-4 h-4 text-emerald-600" /> Log Supplier Purchase
+          <summary className="p-5 border-b border-slate-200 dark:border-darkborder flex justify-between items-center cursor-pointer select-none focus:outline-none bg-slate-50/60 dark:bg-darksurface/40">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+              <Truck className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Log Supplier Purchase
             </h2>
-            <div className="text-slate-400 group-open:rotate-180 transition-transform">
+            <div className="text-slate-500 dark:text-slate-400 group-open:rotate-180 transition-transform">
               <ChevronDown className="w-4 h-4" />
             </div>
           </summary>
@@ -483,7 +465,7 @@ export const BnplView: React.FC<BnplViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomBatch((v) => !v)}
-                    className="px-3.5 bg-emerald-600 text-white rounded-lg text-xs font-extrabold btn-transition"
+                    className="px-3.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold btn-transition"
                   >
                     {isAddingCustomBatch ? 'Cancel' : '+ Custom'}
                   </button>
@@ -660,7 +642,7 @@ export const BnplView: React.FC<BnplViewProps> = ({
 
               <button
                 type="submit"
-                className="btn-transition w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 mt-2"
+                className="btn-transition w-full bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
               >
                 <FilePlus className="w-4 h-4" /> Post Supplier Purchase
               </button>
@@ -669,10 +651,10 @@ export const BnplView: React.FC<BnplViewProps> = ({
         </details>
 
         {/* Accounts Payable Ledger */}
-        <div className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek xl:col-span-2 overflow-hidden flex flex-col min-h-[480px] w-full">
-          <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-darkborder bg-slate-50/50 dark:bg-darkbg/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-sm font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
-              <Clock className="w-4 h-4 text-brand-500" /> Accounts Payable History Ledger
+        <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder xl:col-span-2 overflow-hidden flex flex-col min-h-[480px] w-full">
+          <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder bg-slate-50/60 dark:bg-darksurface/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+              <Clock className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Accounts Payable History Ledger
             </h2>
 
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -980,10 +962,10 @@ export const BnplView: React.FC<BnplViewProps> = ({
         </div>
 
         {/* Performance Analysis Matrix Table */}
-        <div className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek overflow-hidden mt-6 w-full">
-          <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-darkborder bg-slate-50/50 dark:bg-darkbg/40">
-            <h2 className="text-sm font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
-              <BarChart2 className="w-4 h-4 text-brand-500" /> Stock Batch Performance Matrix (Gross
+        <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder overflow-hidden mt-6 w-full">
+          <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder bg-slate-50/60 dark:bg-darksurface/40">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+              <BarChart2 className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Stock Batch Performance Matrix (Gross
               Sold vs Spent)
             </h2>
           </div>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cheoreobiz-v4';
+const CACHE_NAME = 'cheoreobiz-v5';
 const PRECACHE_ASSETS = [
   './',
   './index.html',

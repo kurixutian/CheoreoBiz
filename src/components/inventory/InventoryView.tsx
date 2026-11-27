@@ -14,6 +14,7 @@ import { InventoryItem, BnplRecord, SortEntry } from '../../types';
 import { getProductHistoricalCPP, getSortedInventory } from '../../services/calculations';
 import { resizeProductImage } from '../../services/exportReceipt';
 import { SortIndicator } from '../common/SortIndicator';
+import { ViewHeader } from '../common/ViewHeader';
 
 interface InventoryViewProps {
   inventory: InventoryItem[];
@@ -98,19 +99,30 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
   return (
     <section data-tab-content="inventory" className="space-y-6 block animate-fade-in">
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <ViewHeader title="Inventory">
+        <button
+          type="button"
+          onClick={onOpenStockHistoryModal}
+          className="flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-darkcard border border-slate-200 dark:border-darkborder hover:bg-slate-50 dark:hover:bg-darksurface text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-colors btn-transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+        >
+          <History className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+          <span>Restock Audit Log</span>
+        </button>
+      </ViewHeader>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         {/* Collapsible Form */}
         <details
           id="inventory-form-container"
-          className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200 dark:border-darkborder shadow-sleek xl:col-span-1 group"
+          className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder xl:col-span-1 group overflow-hidden"
           open
         >
-          <summary className="p-5 sm:p-6 border-b border-slate-200 dark:border-darkborder flex justify-between items-center cursor-pointer select-none focus:outline-none">
-            <h2 className="text-base font-bold flex items-center gap-2.5 text-slate-900 dark:text-white">
-              <PlusCircle className="w-5 h-5 text-emerald-600" /> Register Product
+          <summary className="p-5 border-b border-slate-200 dark:border-darkborder flex justify-between items-center cursor-pointer select-none focus:outline-none bg-slate-50/60 dark:bg-darksurface/40">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+              <PlusCircle className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Register Product
             </h2>
-            <div className="text-slate-400 group-open:rotate-180 transition-transform">
-              <ChevronDown className="w-5 h-5" />
+            <div className="text-slate-500 dark:text-slate-400 group-open:rotate-180 transition-transform">
+              <ChevronDown className="w-4 h-4" />
             </div>
           </summary>
 
@@ -214,7 +226,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </div>
               <button
                 type="submit"
-                className="btn-transition w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold py-3 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 mt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                className="btn-transition w-full bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 mt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
               >
                 <Plus className="w-4 h-4" /> Register Item
               </button>
@@ -223,17 +235,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </details>
 
         {/* Active Inventory Table */}
-        <div className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200 dark:border-darkborder shadow-sleek xl:col-span-2 overflow-hidden flex flex-col min-h-[500px] w-full">
-          <div className="p-5 border-b border-slate-200 dark:border-darkborder flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-darkbg/40">
-            <h2 className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-              <Package className="w-5 h-5 text-brand-500" /> Active Inventory Items
+        <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder xl:col-span-2 overflow-hidden flex flex-col min-h-[500px] w-full">
+          <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder flex justify-between items-center gap-4 bg-slate-50/60 dark:bg-darksurface/40">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+              <Package className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Active Inventory Items
             </h2>
-            <button
-              onClick={onOpenStockHistoryModal}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-all shadow-xs btn-transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-            >
-              <History className="w-4 h-4" /> Restock Audit Log
-            </button>
+            <span className="text-xs font-mono tabular-nums font-semibold text-slate-600 dark:text-slate-400">
+              {displayList.length} items
+            </span>
           </div>
           <div className="w-full overflow-x-auto custom-scrollbar flex-1">
             <table className="w-full divide-y divide-slate-200 dark:divide-darkborder ledger-inventory-table">

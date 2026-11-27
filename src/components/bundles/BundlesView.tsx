@@ -12,6 +12,7 @@ import {
 import { InventoryItem, Bundle, BundleItem, SortEntry } from '../../types';
 import { getSortedBundles } from '../../services/calculations';
 import { SortIndicator } from '../common/SortIndicator';
+import { ViewHeader } from '../common/ViewHeader';
 
 interface BundlesViewProps {
   inventory: InventoryItem[];
@@ -115,18 +116,20 @@ export const BundlesView: React.FC<BundlesViewProps> = ({
 
   return (
     <section data-tab-content="bundles" className="space-y-6 block animate-fade-in">
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <ViewHeader title="Promos & Bundles" />
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <details
           id="bundle-form-container"
-          className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek xl:col-span-1 group"
+          className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder xl:col-span-1 group overflow-hidden"
           open
         >
-          <summary className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-darkborder flex justify-between items-center cursor-pointer select-none focus:outline-none">
-            <h2 className="text-base font-extrabold flex items-center gap-2.5 text-slate-900 dark:text-white">
-              <Sparkles className="w-5 h-5 text-brand-500" /> Promo &amp; Bundle Builder
+          <summary className="p-5 border-b border-slate-200 dark:border-darkborder flex justify-between items-center cursor-pointer select-none focus:outline-none bg-slate-50/60 dark:bg-darksurface/40">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+              <Sparkles className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Promo &amp; Bundle Builder
             </h2>
-            <div className="text-slate-400 group-open:rotate-180 transition-transform">
-              <ChevronDown className="w-5 h-5" />
+            <div className="text-slate-500 dark:text-slate-400 group-open:rotate-180 transition-transform">
+              <ChevronDown className="w-4 h-4" />
             </div>
           </summary>
 
@@ -262,7 +265,7 @@ export const BundlesView: React.FC<BundlesViewProps> = ({
                 <button
                   type="submit"
                   id="bundle-submit-btn"
-                  className="btn-transition w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2"
+                  className="btn-transition w-full bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
                 >
                   <CheckCircle className="w-4 h-4" />{' '}
                   {editingBundleId ? 'Update Promo' : 'Save Promo Bundle'}
@@ -272,7 +275,7 @@ export const BundlesView: React.FC<BundlesViewProps> = ({
                     type="button"
                     id="bundle-cancel-btn"
                     onClick={cancelEdit}
-                    className="btn-transition w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+                    className="btn-transition w-full bg-slate-100 hover:bg-slate-200 dark:bg-darksurface dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 border border-slate-200 dark:border-darkborder"
                   >
                     Cancel Edit
                   </button>
@@ -282,11 +285,14 @@ export const BundlesView: React.FC<BundlesViewProps> = ({
           </div>
         </details>
 
-        <div className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200/80 dark:border-darkborder shadow-sleek xl:col-span-2 overflow-hidden flex flex-col w-full">
-          <div className="p-5 border-b border-slate-200/80 dark:border-darkborder flex justify-between items-center bg-slate-50/50 dark:bg-darkbg/40">
-            <h2 className="text-base font-extrabold flex items-center gap-2.5 text-slate-900 dark:text-white">
-              <Tags className="w-5 h-5 text-brand-500" /> Active Promotional Bundles
+        <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder xl:col-span-2 overflow-hidden flex flex-col w-full">
+          <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder flex justify-between items-center bg-slate-50/60 dark:bg-darksurface/40">
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+              <Tags className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Active Promotional Bundles
             </h2>
+            <span className="text-xs font-mono tabular-nums font-semibold text-slate-600 dark:text-slate-400">
+              {displayBundles.length} promos
+            </span>
           </div>
           <div className="w-full overflow-x-auto custom-scrollbar flex-1">
             <table className="w-full divide-y divide-slate-200 dark:divide-darkborder ledger-bundles-table">

@@ -37,28 +37,30 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className="fixed bottom-24 right-4 md:bottom-8 md:right-8 z-50 bg-white dark:bg-darkcard rounded-3xl shadow-2xl border border-slate-200 dark:border-darkborder w-80 overflow-hidden transition-all duration-300 transform origin-bottom-right animate-scale-in">
-      <div className="bg-slate-900 dark:bg-slate-800 px-5 py-4 flex justify-between items-center text-white">
+    <div className="fixed bottom-24 right-4 md:bottom-8 md:right-8 z-50 bg-white dark:bg-darkcard rounded-2xl shadow-2xl border border-slate-200 dark:border-darkborder w-80 overflow-hidden transition-all duration-200 transform origin-bottom-right animate-scale-in">
+      <div className="bg-slate-900 dark:bg-darksurface border-b border-slate-800 dark:border-darkborder px-4 py-3.5 flex justify-between items-center text-white">
         <div className="flex items-center space-x-2">
           <Calculator className="w-4 h-4 text-brand-400" />
-          <span className="font-bold text-sm tracking-wide">Quick Calculator</span>
+          <span className="font-semibold text-sm tracking-tight">Quick Calculator</span>
         </div>
         <button
           onClick={onClose}
-          className="text-slate-400 hover:text-white transition-colors bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 rounded-lg p-1"
+          aria-label="Close calculator"
+          className="text-slate-300 hover:text-white transition-colors bg-slate-800 dark:bg-darkcard hover:bg-slate-700 rounded-lg p-1.5"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
-      <div className="p-5 bg-slate-50 dark:bg-darkbg">
+      <div className="p-4 bg-slate-50 dark:bg-darkbg">
         <input
           type="text"
           value={expression}
           readOnly
-          className="w-full text-right text-3xl font-mono bg-white dark:bg-darkinput border border-slate-200 dark:border-darkborder rounded-2xl p-4 mb-4 text-slate-800 dark:text-white shadow-inner focus:outline-none font-bold tracking-tight"
+          aria-label="Calculator display"
+          className="w-full text-right text-3xl font-mono tabular-nums bg-white dark:bg-darkinput border border-slate-200 dark:border-darkborder rounded-xl p-3.5 mb-3.5 text-slate-900 dark:text-white focus:outline-none font-bold tracking-tight"
           placeholder="0"
         />
-        <div className="grid grid-cols-4 gap-2.5 text-center font-bold text-lg">
+        <div className="grid grid-cols-4 gap-2 text-center font-semibold text-base">
           {buttons.map((val, idx) => {
             const isClear = val === 'C';
             const isEquals = val === '=';
@@ -74,12 +76,12 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({ isOpen, onClos
                 onClick={() => handlePress(val)}
                 className={`${spanClass} ${
                   isClear
-                    ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-200'
+                    ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-500/30'
                     : isEquals
-                    ? 'bg-brand-600 text-white hover:bg-brand-500 shadow-md shadow-brand-500/20 flex items-center justify-center'
+                    ? 'bg-brand-600 text-white hover:bg-brand-700 flex items-center justify-center'
                     : isOp
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center'
-                    : 'bg-white dark:bg-darkcard border border-slate-200 dark:border-darkborder text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-xs'
+                    ? 'bg-slate-200 dark:bg-darksurface text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-800 flex items-center justify-center'
+                    : 'bg-white dark:bg-darkcard border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-darksurface'
                 } rounded-xl py-3 transition-colors active:scale-95`}
               >
                 {val === '*' ? '×' : val === '/' ? '÷' : val}

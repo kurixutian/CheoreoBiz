@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart2, X } from 'lucide-react';
+import { BarChart2 } from 'lucide-react';
 import {
   BnplRecord,
   FinancialModalType,
@@ -13,6 +13,7 @@ import {
   getProductHistoricalCPP,
   isWithinTimeframe,
 } from '../../services/calculations';
+import { ModalShell } from '../common/ModalShell';
 
 interface FinancialDetailsModalProps {
   type: FinancialModalType | null;
@@ -325,88 +326,63 @@ export const FinancialDetailsModal: React.FC<FinancialDetailsModalProps> = ({
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="financial-details-modal-title"
-        className="bg-white dark:bg-darkcard rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-100 dark:border-darkborder animate-scale-in"
-      >
-        <div className="px-6 py-5 border-b border-slate-100 dark:border-darkborder flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-          <div className="flex items-center space-x-3">
-            <div className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded-lg">
-              <BarChart2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 id="financial-details-modal-title" className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">
-                {title}
-              </h3>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{subtitle}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Close modal"
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-white dark:bg-darksurface p-1.5 rounded-lg border border-slate-200 dark:border-darkborder shadow-xs transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="p-0 overflow-y-auto flex-1">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 bg-slate-50/95 dark:bg-darksurface/95 shadow-xs z-10 border-b border-slate-100 dark:border-darkborder">
-              <tr className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                {headers.map((h, i) => (
-                  <th key={i} className={`px-6 py-3.5 ${h.align === 'right' ? 'text-right' : ''}`}>
-                    {h.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-darkborder text-xs tabular-nums">
-              {rows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={headers.length}
-                    className="px-6 py-10 text-center text-slate-400 font-medium"
-                  >
-                    No records found for this metric.
-                  </td>
-                </tr>
-              ) : (
-                rows
-              )}
-            </tbody>
-            <tfoot className="sticky bottom-0 bg-slate-100 dark:bg-slate-800 border-t-2 border-slate-200 dark:border-darkborder shadow-inner">
-              <tr>
-                <td
-                  colSpan={Math.max(1, headers.length - 1)}
-                  className="px-6 py-4 text-right font-bold text-slate-600 dark:text-slate-300 text-xs"
-                >
-                  {footerLabel}
-                </td>
-                <td className="px-6 py-4 text-right font-extrabold font-mono tabular-nums text-slate-900 dark:text-white text-base">
-                  {footerValue}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-darkborder bg-white dark:bg-darkcard flex justify-end">
+    <ModalShell
+      title={title}
+      titleId="financial-details-modal-title"
+      subtitle={subtitle}
+      icon={<BarChart2 className="w-5 h-5" />}
+      maxWidthClass="max-w-4xl"
+      onClose={onClose}
+      footer={
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-sm font-semibold hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors shadow-xs"
+            className="px-5 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
           >
             Close
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <table className="w-full text-left border-collapse">
+        <thead className="sticky top-0 bg-slate-50 dark:bg-darksurface z-10 border-b border-slate-200 dark:border-darkborder">
+          <tr className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            {headers.map((h, i) => (
+              <th key={i} className={`px-5 sm:px-6 py-3 ${h.align === 'right' ? 'text-right' : ''}`}>
+                {h.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100 dark:divide-darkborder text-xs tabular-nums">
+          {rows.length === 0 ? (
+            <tr>
+              <td
+                colSpan={headers.length}
+                className="px-6 py-10 text-center text-slate-600 dark:text-slate-400 font-medium"
+              >
+                No records found for this metric.
+              </td>
+            </tr>
+          ) : (
+            rows
+          )}
+        </tbody>
+        <tfoot className="sticky bottom-0 bg-slate-100 dark:bg-darksurface border-t border-slate-200 dark:border-darkborder">
+          <tr>
+            <td
+              colSpan={Math.max(1, headers.length - 1)}
+              className="px-5 sm:px-6 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-300 text-xs"
+            >
+              {footerLabel}
+            </td>
+            <td className="px-5 sm:px-6 py-3.5 text-right font-bold font-mono tabular-nums text-slate-900 dark:text-white text-sm sm:text-base">
+              {footerValue}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </ModalShell>
   );
 };

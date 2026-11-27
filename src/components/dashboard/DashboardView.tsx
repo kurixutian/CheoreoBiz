@@ -12,6 +12,7 @@ import {
   FinancialModalType,
   DashboardModalType,
 } from '../../types';
+import { ViewHeader } from '../common/ViewHeader';
 
 interface DashboardViewProps {
   timeframe: Timeframe;
@@ -41,14 +42,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   return (
     <section data-tab-content="dashboard" className="space-y-6 animate-fade-in block">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Overview
-          </h1>
-        </div>
-
-        <div className="flex bg-slate-200/70 dark:bg-darkcard p-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-darkborder w-full sm:w-auto">
+      <ViewHeader title="Overview">
+        <div className="flex bg-slate-200/70 dark:bg-darkcard p-1 rounded-xl text-xs font-semibold border border-slate-200 dark:border-darkborder w-full sm:w-auto">
           {TIMEFRAMES.map(({ id, label }) => {
             const active = timeframe === id;
             return (
@@ -57,10 +52,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 type="button"
                 onClick={() => onTimeframeChange(id)}
                 data-timeframe={id}
-                className={`px-3.5 py-1.5 rounded-md transition-colors flex-1 sm:flex-none ${
+                className={`px-3.5 py-1.5 rounded-lg transition-all flex-1 sm:flex-none whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${
                   active
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    ? 'bg-white dark:bg-darksurface text-slate-900 dark:text-white border border-slate-200/70 dark:border-white/10'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
                 }`}
               >
                 {label}
@@ -68,10 +63,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             );
           })}
         </div>
-      </div>
+      </ViewHeader>
 
-      {/* Primary Financial KPI Strip (Divided Container per App Screen Rules) */}
-      <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 sm:divide-x divide-slate-200 dark:divide-darkborder overflow-hidden shadow-xs">
+      {/* Primary Financial KPI Strip */}
+      <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 sm:divide-x divide-slate-200 dark:divide-darkborder overflow-hidden">
         <button
           type="button"
           onClick={() => onOpenFinancialModal('revenue')}
@@ -192,21 +187,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Inventory Financial Metrics Breakdown */}
-      <div className="space-y-3">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+      <div className="space-y-3 pt-1">
+        <h2 className="text-base font-semibold tracking-[-0.01em] text-slate-900 dark:text-white">
           Inventory valuation &amp; projections
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <button
             type="button"
             onClick={() => onOpenFinancialModal('inventory_value')}
-            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-600 transition-all flex flex-col justify-between group shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
+            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-darksurface/40 transition-all active:scale-[0.99] flex flex-col justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
           >
             <div className="flex items-center justify-between w-full">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 Inventory cost value
               </p>
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-brand-600 transition-all" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-500 opacity-50 group-hover:opacity-100 group-hover:text-brand-600 transition-all" />
             </div>
             <p className="text-lg sm:text-xl font-mono tabular-nums font-bold text-slate-900 dark:text-white tracking-tight truncate mt-2 whitespace-nowrap">
               <span className="text-xs text-slate-500 mr-0.5">₱</span>
@@ -214,7 +209,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {summary.inventoryVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 whitespace-nowrap">
               Active stock at weighted CPP
             </p>
           </button>
@@ -222,13 +217,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             onClick={() => onOpenFinancialModal('money_spent')}
-            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-600 transition-all flex flex-col justify-between group shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
+            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-darksurface/40 transition-all active:scale-[0.99] flex flex-col justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
           >
             <div className="flex items-center justify-between w-full">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 Capital deployed
               </p>
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-brand-600 transition-all" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-500 opacity-50 group-hover:opacity-100 group-hover:text-brand-600 transition-all" />
             </div>
             <p className="text-lg sm:text-xl font-mono tabular-nums font-bold text-slate-900 dark:text-white tracking-tight truncate mt-2 whitespace-nowrap">
               <span className="text-xs text-slate-500 mr-0.5">₱</span>
@@ -236,7 +231,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {summary.totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 whitespace-nowrap">
               Historical procurement cost
             </p>
           </button>
@@ -244,13 +239,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             onClick={() => onOpenFinancialModal('expected_sales')}
-            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-600 transition-all flex flex-col justify-between group shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
+            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-darksurface/40 transition-all active:scale-[0.99] flex flex-col justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
           >
             <div className="flex items-center justify-between w-full">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 Expected retail sales
               </p>
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-brand-600 transition-all" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-500 opacity-50 group-hover:opacity-100 group-hover:text-brand-600 transition-all" />
             </div>
             <p className="text-lg sm:text-xl font-mono tabular-nums font-bold text-slate-900 dark:text-white tracking-tight truncate mt-2 whitespace-nowrap">
               <span className="text-xs text-slate-500 mr-0.5">₱</span>
@@ -258,7 +253,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {summary.expectedSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 whitespace-nowrap">
               Unsold stock at retail price
             </p>
           </button>
@@ -266,13 +261,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             onClick={() => onOpenFinancialModal('expected_profit')}
-            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-600 transition-all flex flex-col justify-between group shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
+            className="text-left bg-white dark:bg-darkcard p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-darkborder hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-darksurface/40 transition-all active:scale-[0.99] flex flex-col justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 min-w-0"
           >
             <div className="flex items-center justify-between w-full">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 Expected stock profit
               </p>
-              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500 opacity-40 group-hover:opacity-100 transition-all" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500 opacity-50 group-hover:opacity-100 transition-all" />
             </div>
             <p className="text-lg sm:text-xl font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400 tracking-tight truncate mt-2 whitespace-nowrap">
               <span className="text-xs mr-0.5">₱</span>
@@ -280,7 +275,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {summary.expectedProfitVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 whitespace-nowrap">
               Projected net margin on stock
             </p>
           </button>

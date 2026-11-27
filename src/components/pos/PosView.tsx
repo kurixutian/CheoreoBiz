@@ -41,6 +41,7 @@ import {
   getOrderItems,
 } from '../../services/calculations';
 import { SortIndicator } from '../common/SortIndicator';
+import { ViewHeader } from '../common/ViewHeader';
 
 interface PosViewProps {
   inventory: InventoryItem[];
@@ -210,22 +211,15 @@ export const PosView: React.FC<PosViewProps> = ({
 
   return (
     <section data-tab-content="orders" className="space-y-6 relative block animate-fade-in">
-      {/* Sub-view Switcher: Both Register and Ledger seamlessly available */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-darkborder pb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Point of Sale (POS)
-          </h1>
-        </div>
-
-        <div className="flex bg-slate-200/70 dark:bg-darkcard p-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-darkborder w-full sm:w-auto">
+      <ViewHeader title="Point of Sale">
+        <div className="flex bg-slate-200/70 dark:bg-darkcard p-1 rounded-xl text-xs font-semibold border border-slate-200 dark:border-darkborder w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setPosSubTab('register')}
-            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md transition-all flex-1 sm:flex-none whitespace-nowrap text-xs ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg transition-all flex-1 sm:flex-none whitespace-nowrap text-xs ${
               posSubTab === 'register'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-darksurface text-slate-900 dark:text-white border border-slate-200/70 dark:border-white/10 font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
             }`}
           >
             <ShoppingBag className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 flex-shrink-0" />
@@ -234,20 +228,20 @@ export const PosView: React.FC<PosViewProps> = ({
           <button
             type="button"
             onClick={() => setPosSubTab('ledger')}
-            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md transition-all flex-1 sm:flex-none whitespace-nowrap text-xs ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg transition-all flex-1 sm:flex-none whitespace-nowrap text-xs ${
               posSubTab === 'ledger'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-darksurface text-slate-900 dark:text-white border border-slate-200/70 dark:border-white/10 font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
             }`}
           >
             <Receipt className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 flex-shrink-0" />
             <span className="whitespace-nowrap">Sales Ledger</span>
-            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono tabular-nums bg-slate-200/80 dark:bg-darkinput text-slate-700 dark:text-slate-300">
               {orders.length}
             </span>
           </button>
         </div>
-      </div>
+      </ViewHeader>
 
       {posSubTab === 'register' && (
         <>
@@ -262,14 +256,14 @@ export const PosView: React.FC<PosViewProps> = ({
             <button
               onClick={() => setIsCartModalOpen(true)}
               aria-label="Open checkout basket"
-              className="w-14 h-14 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/30 transition-transform active:scale-95 relative"
+              className="w-14 h-14 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl flex items-center justify-center shadow-xl border border-white/10 transition-transform active:scale-95 relative"
             >
               <ShoppingBag className="w-6 h-6" />
               <span
                 id="mobile-fab-badge-count"
                 className={`absolute -top-2 -right-2 bg-rose-600 text-white text-[11px] font-bold rounded-full h-5 min-w-[20px] px-1.5 ${
                   totalQty === 0 ? 'hidden' : 'inline-flex'
-                } items-center justify-center border-2 border-white dark:border-darkcard shadow-md z-10 leading-none pointer-events-none`}
+                } items-center justify-center border-2 border-white dark:border-darkbg shadow-md z-10 leading-none pointer-events-none font-mono tabular-nums`}
               >
                 {badgeText}
               </span>
@@ -280,16 +274,16 @@ export const PosView: React.FC<PosViewProps> = ({
             {/* Catalog Container */}
             <details
               id="pos-catalog-container"
-              className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200 dark:border-darkborder shadow-sleek xl:col-span-2 group flex flex-col transition-all duration-300"
+              className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder xl:col-span-2 group flex flex-col overflow-hidden transition-all duration-300"
               open
             >
-              <summary className="p-5 border-b border-slate-200 dark:border-darkborder flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-darkbg/40 cursor-pointer select-none focus:outline-none">
+              <summary className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 bg-slate-50/60 dark:bg-darksurface/40 cursor-pointer select-none focus:outline-none">
                 <div className="flex items-center justify-between w-full sm:w-auto">
-                  <h2 className="text-base font-bold flex items-center gap-2.5 whitespace-nowrap text-slate-900 dark:text-white">
-                    <Grid3x3 className="w-5 h-5 text-brand-500" /> Product Catalog
+                  <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 whitespace-nowrap text-slate-900 dark:text-white">
+                    <Grid3x3 className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Product Catalog
                   </h2>
-                  <div className="text-slate-400 group-open:rotate-180 transition-transform sm:hidden ml-2">
-                    <ChevronDown className="w-5 h-5" />
+                  <div className="text-slate-500 dark:text-slate-400 group-open:rotate-180 transition-transform sm:hidden ml-2">
+                    <ChevronDown className="w-4 h-4" />
                   </div>
                 </div>
                 <div
@@ -397,11 +391,11 @@ export const PosView: React.FC<PosViewProps> = ({
         >
           <div
             id="cart-wrapper"
-            className={`bg-white dark:bg-darkcard border border-slate-200 dark:border-darkborder w-full max-w-[420px] xl:max-w-none rounded-2xl shadow-2xl xl:shadow-sleek flex flex-col transform ${
+            className={`bg-white dark:bg-darkcard border border-slate-200 dark:border-darkborder w-full max-w-[420px] xl:max-w-none rounded-2xl xl:rounded-xl shadow-2xl xl:shadow-none flex flex-col transform ${
               isCartModalOpen ? 'scale-100' : 'scale-95'
             } xl:transform-none transition-transform duration-200 relative overflow-hidden max-h-[92vh] xl:max-h-[calc(100vh-120px)] my-auto`}
           >
-            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder flex justify-between items-center bg-slate-100/70 dark:bg-darkbg/60 xl:bg-slate-50/50 xl:dark:bg-darkbg/30 select-none flex-none rounded-t-2xl">
+            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder flex justify-between items-center bg-slate-50/70 dark:bg-darksurface/40 select-none flex-none">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <div className="relative flex-shrink-0">
                   <ShoppingCart className="w-5 h-5 text-brand-500" />
@@ -467,21 +461,21 @@ export const PosView: React.FC<PosViewProps> = ({
                       return (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between bg-white dark:bg-darkcard p-3 rounded-3xl border border-slate-200/80 dark:border-darkborder shadow-xs transition-all hover:border-brand-300 dark:hover:border-brand-600 animate-scale-in"
+                          className="flex items-center justify-between bg-white dark:bg-darkcard p-3 rounded-xl border border-slate-200 dark:border-darkborder transition-colors hover:border-brand-400 dark:hover:border-brand-500 animate-scale-in"
                         >
                           <div className="flex flex-col flex-1 min-w-0 mr-2">
-                            <span className="font-bold text-slate-900 dark:text-slate-100 truncate text-xs mb-0.5">
+                            <span className="font-semibold text-slate-900 dark:text-slate-100 truncate text-xs mb-0.5">
                               {item.name}
                             </span>
                             <div className="whitespace-nowrap">
-                              <span className="text-xs font-mono tabular-nums text-slate-500 whitespace-nowrap">
+                              <span className="text-xs font-mono tabular-nums text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                 ₱{' '}
                                 {item.sellPrice.toLocaleString(undefined, {
                                   minimumFractionDigits: 2,
                                 })}
                               </span>
                               {discount > 0 && (
-                                <span className="ml-1.5 text-[11px] font-mono font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                <span className="ml-1.5 text-[11px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
                                   - ₱{' '}
                                   {discount.toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
@@ -490,21 +484,21 @@ export const PosView: React.FC<PosViewProps> = ({
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 bg-slate-50 dark:bg-darkinput p-1 rounded-full border border-slate-100 dark:border-darkborder shadow-inner">
+                          <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-darkinput p-1 rounded-xl border border-slate-200/80 dark:border-darkborder">
                             <button
                               onClick={() => onUpdateCartQty(item.id, -1)}
                               aria-label={`Decrease quantity of ${item.name}`}
-                              className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all"
+                              className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-rose-600 hover:bg-white dark:hover:bg-darksurface rounded-lg transition-colors active:scale-95"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
-                            <span className="w-7 text-center font-mono font-black text-xs text-slate-900 dark:text-white">
+                            <span className="w-7 text-center font-mono tabular-nums font-bold text-xs text-slate-900 dark:text-white">
                               {item.qty}
                             </span>
                             <button
                               onClick={() => onUpdateCartQty(item.id, 1)}
                               aria-label={`Increase quantity of ${item.name}`}
-                              className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-brand-600 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all"
+                              className="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-brand-600 hover:bg-white dark:hover:bg-darksurface rounded-lg transition-colors active:scale-95"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -514,14 +508,14 @@ export const PosView: React.FC<PosViewProps> = ({
                     })}
 
                     {cartCalc.appliedBundles.length > 0 && (
-                      <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-darkborder space-y-1 bg-emerald-50/70 dark:bg-emerald-500/10 p-3.5 rounded-3xl">
-                        <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      <div className="mt-3 pt-2.5 border border-emerald-200 dark:border-emerald-800/40 space-y-1 bg-emerald-50/70 dark:bg-emerald-500/10 p-3.5 rounded-xl">
+                        <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                           Applied Promotions
                         </div>
                         {cartCalc.appliedBundles.map((b, idx) => (
                           <div
                             key={`${b.name}-${idx}`}
-                            className="flex justify-between text-xs text-emerald-700 dark:text-emerald-400 font-bold font-mono"
+                            className="flex justify-between text-xs text-emerald-700 dark:text-emerald-400 font-semibold font-mono tabular-nums"
                           >
                             <span>
                               <Tag className="w-3 h-3 inline mr-1 mb-0.5" />
@@ -543,40 +537,40 @@ export const PosView: React.FC<PosViewProps> = ({
 
               <details
                 id="smart-suggestions-section"
-                className="bg-white dark:bg-darkcard rounded-3xl border border-slate-200/80 dark:border-darkborder p-3.5 shadow-xs mt-2 group"
+                className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder p-3.5 mt-2 group"
               >
                 <summary className="flex justify-between items-center cursor-pointer select-none list-none">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Smart Recommendation
                   </span>
-                  <span className="text-xs font-semibold text-brand-600 bg-brand-50 dark:bg-brand-950/50 px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] font-semibold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-500/15 px-2 py-0.5 rounded-full">
                     Cross-Sell
                   </span>
                 </summary>
                 <div id="smart-suggestions-list" className="grid grid-cols-1 gap-2 mt-2.5">
                   {topSuggestions.length === 0 ? (
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-darkbg/60 border border-slate-100 dark:border-darkborder text-left text-slate-400 dark:text-slate-500 text-xs font-medium flex items-center gap-2">
-                      <Info className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-darkbg/60 border border-slate-200/80 dark:border-darkborder text-left text-slate-600 dark:text-slate-400 text-xs font-medium flex items-center gap-2">
+                      <Info className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                       Add items to basket to activate complementary product suggestions.
                     </div>
                   ) : (
                     topSuggestions.map((item) => (
                       <div
                         key={item.id}
-                        className="suggestion-item-card flex items-center justify-between p-2.5 rounded-2xl border border-slate-200/80 dark:border-darkborder bg-slate-50/50 dark:bg-darkbg/40 text-xs font-semibold animate-scale-in"
+                        className="suggestion-item-card flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-darkborder bg-slate-50/60 dark:bg-darksurface/40 text-xs font-semibold animate-scale-in"
                       >
                         <div className="min-w-0 flex-1 pr-2">
-                          <p className="text-slate-900 dark:text-slate-200 font-bold truncate">
+                          <p className="text-slate-900 dark:text-slate-200 font-semibold truncate">
                             {item.name}
                           </p>
-                          <p className="text-xs text-slate-400 font-medium">
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium font-mono tabular-nums">
                             Stock: {item.stockQty} left • ₱ {(item.sellPrice || 0).toFixed(2)}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => onAddToCart(item.id)}
-                          className="px-3 py-1 bg-brand-50 dark:bg-brand-500/10 hover:bg-brand-100 text-brand-600 dark:text-brand-400 text-xs font-bold rounded-full btn-transition flex items-center gap-1 flex-shrink-0"
+                          className="px-3 py-1.5 bg-brand-50 dark:bg-brand-500/15 hover:bg-brand-100 dark:hover:bg-brand-500/25 text-brand-700 dark:text-brand-300 text-xs font-semibold rounded-lg btn-transition flex items-center gap-1 flex-shrink-0"
                         >
                           <Plus className="w-3.5 h-3.5" /> Add
                         </button>
@@ -587,7 +581,7 @@ export const PosView: React.FC<PosViewProps> = ({
               </details>
             </div>
 
-            <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-darkborder bg-white dark:bg-darkcard space-y-3 flex-none rounded-b-4xl">
+            <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-darkborder bg-white dark:bg-darkcard space-y-3 flex-none">
               <div className="space-y-1 text-xs font-bold text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-darkborder pb-2.5">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
@@ -798,7 +792,7 @@ export const PosView: React.FC<PosViewProps> = ({
 
               <button
                 onClick={handleCheckoutSubmit}
-                className="btn-transition w-full bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold py-3 rounded-xl shadow-md shadow-emerald-500/20 flex justify-center items-center gap-2 mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+                className="btn-transition w-full bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold py-3 rounded-xl flex justify-center items-center gap-2 mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>
@@ -843,11 +837,11 @@ export const PosView: React.FC<PosViewProps> = ({
       </div>
 
       {/* Sales History Ledger Table Container */}
-      <div className="bg-white dark:bg-darkcard rounded-2xl border border-slate-200 dark:border-darkborder shadow-sleek flex flex-col overflow-hidden w-full">
-        <div className="p-5 border-b border-slate-200 dark:border-darkborder flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-slate-50/50 dark:bg-darkbg/40">
+      <div className="bg-white dark:bg-darkcard rounded-xl border border-slate-200 dark:border-darkborder flex flex-col overflow-hidden w-full">
+        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-darkborder flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-slate-50/60 dark:bg-darksurface/40">
           <div className="flex flex-col md:flex-row md:items-center gap-3 w-full xl:w-auto">
-            <h2 className="text-base font-bold flex items-center gap-2.5 text-slate-900 dark:text-white flex-shrink-0">
-              <Receipt className="w-5 h-5 text-brand-500" /> Transaction Sales Ledger
+            <h2 className="text-sm sm:text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-white flex-shrink-0">
+              <Receipt className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Transaction Sales Ledger
             </h2>
             <div className="flex bg-slate-200/70 dark:bg-darkinput p-1 rounded-lg border border-slate-200 dark:border-darkborder w-full md:w-auto overflow-x-auto no-scrollbar">
               {ORDER_TABS.map(({ id, label, btnId }) => {
@@ -910,7 +904,7 @@ export const PosView: React.FC<PosViewProps> = ({
             </div>
             <button
               onClick={onExportCSV}
-              className="btn-transition flex items-center gap-1.5 text-xs font-semibold text-brand-700 dark:text-emerald-300 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/40 px-3.5 py-1.5 rounded-lg border border-brand-200/80 dark:border-emerald-800/40 shadow-xs"
+              className="btn-transition flex items-center gap-1.5 text-xs font-semibold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-500/15 hover:bg-brand-100 dark:hover:bg-brand-500/25 px-3.5 py-1.5 rounded-lg border border-brand-200/80 dark:border-brand-500/30"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
             </button>
