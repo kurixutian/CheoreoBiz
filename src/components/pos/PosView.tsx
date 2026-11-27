@@ -700,7 +700,13 @@ export const PosView: React.FC<PosViewProps> = ({
                       }`}
                     />
                   </div>
-                  <label className="flex items-center justify-center gap-2 bg-slate-50 dark:bg-darkinput border border-slate-200 dark:border-darkborder rounded-lg py-2 px-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none">
+                  <label
+                    className={`h-[38px] flex items-center justify-center gap-2 rounded-lg px-2.5 cursor-pointer border transition-colors select-none ${
+                      posPaidFull
+                        ? 'bg-brand-50 dark:bg-brand-500/15 border-brand-500/60 text-brand-700 dark:text-brand-300'
+                        : 'bg-slate-50 dark:bg-darkinput border-slate-200 dark:border-darkborder text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
                     <input
                       type="checkbox"
                       id="pos-paid-full"
@@ -708,18 +714,18 @@ export const PosView: React.FC<PosViewProps> = ({
                       onChange={(e) => handleTogglePaidFull(e.target.checked)}
                       className="accent-brand-600 w-4 h-4 rounded"
                     />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <span className="text-xs font-semibold">
                       Paid Exact
                     </span>
                   </label>
                 </div>
 
                 {/* Quick Cash Tender Denominations */}
-                <div className="flex flex-wrap gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleTogglePaidFull(true)}
-                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 dark:border-darkborder bg-slate-50 dark:bg-darkinput hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap"
+                    className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-darkborder bg-slate-50 dark:bg-darkinput hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap active:scale-[0.98]"
                   >
                     Exact
                   </button>
@@ -729,7 +735,7 @@ export const PosView: React.FC<PosViewProps> = ({
                       setPosPaidFull(false);
                       setPosPaidAmount('0.00');
                     }}
-                    className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 dark:border-darkborder bg-slate-50 dark:bg-darkinput hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap"
+                    className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-darkborder bg-slate-50 dark:bg-darkinput hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap active:scale-[0.98]"
                   >
                     Pay on Delivery
                   </button>
@@ -738,7 +744,7 @@ export const PosView: React.FC<PosViewProps> = ({
                       key={amt}
                       type="button"
                       onClick={() => handleQuickTenderAdd(amt)}
-                      className="px-2.5 py-1 text-xs font-mono tabular-nums font-semibold rounded-lg border border-slate-200 dark:border-darkborder bg-slate-50 dark:bg-darkinput hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap"
+                      className="px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold rounded-lg border border-slate-200 dark:border-darkborder bg-slate-50 dark:bg-darkinput hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap active:scale-[0.98]"
                     >
                       +₱{amt}
                     </button>
@@ -770,7 +776,7 @@ export const PosView: React.FC<PosViewProps> = ({
                 return null;
               })()}
 
-              <div className="flex justify-between items-end pt-1">
+              <div className="flex justify-between items-end pt-3 border-t border-slate-200 dark:border-darkborder">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   Total Order Amount
                 </span>

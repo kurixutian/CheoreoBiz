@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface AuthScreenProps {
   onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -76,14 +76,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       id="auth-screen"
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#F7F7F5] dark:bg-darkbg p-4 overflow-y-auto"
     >
-      <div className="bg-white dark:bg-darkcard p-8 sm:p-10 rounded-xl border border-[#E2E4E9] dark:border-darkborder max-w-md w-full animate-slide-up space-y-6 relative overflow-hidden my-auto">
-        <div className="absolute top-0 left-0 w-full h-1 bg-brand-600" />
-
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-100 dark:bg-darksurface text-slate-900 dark:text-white mb-1 border border-slate-200 dark:border-darkborder">
-            <ShieldCheck className="w-6 h-6 text-brand-600 dark:text-brand-400" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+      <div className="bg-white dark:bg-darkcard p-8 sm:p-10 rounded-2xl border border-[#E2E4E9] dark:border-darkborder shadow-sleek max-w-md w-full animate-slide-up space-y-6 relative overflow-hidden my-auto">
+        <div className="text-center space-y-2.5">
+          <img
+            src="./icon-192.png"
+            alt="CheoreoBiz"
+            className="w-14 h-14 rounded-2xl object-cover mx-auto ring-1 ring-slate-200 dark:ring-white/10 shadow-sm"
+          />
+          <h1 className="text-2xl font-bold tracking-[-0.025em] text-slate-900 dark:text-white">
             CheoreoBiz
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">

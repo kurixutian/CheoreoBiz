@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Layers,
   Calculator,
   Moon,
   Sun,
@@ -44,13 +43,18 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white/95 dark:bg-darkcard/95 backdrop-blur-md border-b border-[#E2E4E9] dark:border-darkborder sticky top-0 z-40 transition-colors flex-none">
       <div className="container mx-auto px-3 sm:px-6 lg:px-8 max-w-[1440px] flex flex-row justify-between items-center py-2.5 sm:py-3">
-        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-          <div className="p-2 bg-brand-600 rounded-lg text-white flex-shrink-0">
-            <Layers className="w-5 h-5" />
-          </div>
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <img
+            src="./icon-192.png"
+            alt="CheoreoBiz"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover flex-shrink-0 ring-1 ring-slate-200 dark:ring-white/10 shadow-xs"
+          />
           <div className="min-w-0">
-            <div className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-none truncate">
+            <div className="text-base sm:text-lg font-bold tracking-[-0.02em] text-slate-900 dark:text-white leading-none truncate">
               CheoreoBiz
+            </div>
+            <div className="hidden sm:block text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+              POS &amp; Operations Ledger
             </div>
           </div>
         </div>
