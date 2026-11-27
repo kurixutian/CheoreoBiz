@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="bg-[#F7F7F5]/85 dark:bg-darkbg/85 backdrop-blur-xl border-b border-[#E2E4E9]/70 dark:border-white/[0.06] relative z-40 transition-colors flex-none">
-      <div className="container mx-auto px-3 sm:px-6 lg:px-8 max-w-[1440px] flex flex-row justify-between items-center py-2.5 sm:py-3">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1440px] flex flex-row justify-between items-center pt-3 pb-2.5 sm:py-3">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <img
             src="./icon-192.png"

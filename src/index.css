@@ -472,12 +472,8 @@ tbody tr:nth-child(even) {
     }
 }
 
-/* Safe Area Inset Support for Notch Mobile Devices */
+/* Safe Area Inset Support for Bottom Home Indicator Devices */
 @supports (padding: max(0px)) {
-    header {
-        padding-top: env(safe-area-inset-top, 0px);
-    }
-
     #mobile-bottom-nav {
         padding-bottom: env(safe-area-inset-bottom, 0px) !important;
         height: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
