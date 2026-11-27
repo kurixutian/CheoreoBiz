@@ -163,7 +163,7 @@ export default function App() {
     if (isDark) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
-      if (themeMeta) themeMeta.setAttribute('content', '#0e1116');
+      if (themeMeta) themeMeta.setAttribute('content', '#060606');
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
