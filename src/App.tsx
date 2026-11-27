@@ -124,7 +124,7 @@ export default function App() {
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const mainScrollRef = useRef<HTMLElement | null>(null);
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const lastMainScrollTopRef = useRef(0);
 
   const showToast = useCallback(
@@ -1268,6 +1268,10 @@ export default function App() {
           onScroll={handleMainScroll}
           className="flex flex-col flex-1 h-full overflow-y-auto"
         >
+          <div
+            aria-hidden="true"
+            className="fixed top-0 left-0 right-0 z-50 bg-[#F7F7F5]/85 dark:bg-darkbg/85 backdrop-blur-xl pointer-events-none safe-top-bar"
+          />
           <Header
             activeTab={activeTab}
             isDark={isDark}
