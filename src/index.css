@@ -28,6 +28,14 @@ html, body {
     overflow-x: hidden !important;
 }
 
+html {
+    background-color: #F7F7F5;
+}
+
+html.dark {
+    background-color: #0e1116;
+}
+
 #root {
     min-height: 100%;
 }
@@ -488,6 +496,10 @@ tbody tr:nth-child(even) {
 
 /* Safe Area Inset Support for Notch Mobile Devices */
 @supports (padding: max(0px)) {
+    header {
+        padding-top: env(safe-area-inset-top, 0px);
+    }
+
     #mobile-bottom-nav {
         padding-bottom: env(safe-area-inset-bottom, 0px) !important;
         height: calc(64px + env(safe-area-inset-bottom, 0px)) !important;

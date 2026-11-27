@@ -158,6 +158,24 @@ export const PosView: React.FC<PosViewProps> = ({
     setPosPaidAmount((current + delta).toFixed(2));
   };
 
+  const handleCheckoutSubmit = () => {
+    if (cart.length === 0) {
+      onCheckoutCart();
+      return;
+    }
+    const totalRevenue = cartCalc.total;
+    let paidVal = parseFloat(posPaidAmount);
+    if (isNaN(paidVal) || paidVal < 0) paidVal = 0;
+    const willBePaid = posPaidFull || paidVal >= totalRevenue - 0.01;
+
+    onCheckoutCart();
+    setPosSubTab('ledger');
+    setCurrentOrdersPage(1);
+    if (willBePaid && currentOrderTab === 'active') {
+      setCurrentOrderTab('all');
+    }
+  };
+
   const catalogItems = inventory.filter((i) =>
     i.name.toLowerCase().includes(posSearch.toLowerCase())
   );
@@ -674,7 +692,7 @@ export const PosView: React.FC<PosViewProps> = ({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
-                          onCheckoutCart();
+                          handleCheckoutSubmit();
                         }
                       }}
                       className={`w-full bg-slate-50 dark:bg-darkinput border border-slate-200 dark:border-darkborder rounded-lg py-2 px-3 text-sm sm:text-xs font-mono tabular-nums font-semibold focus:ring-2 focus:ring-emerald-500/30 outline-none transition-all text-slate-900 dark:text-white ${
@@ -773,7 +791,7 @@ export const PosView: React.FC<PosViewProps> = ({
               </div>
 
               <button
-                onClick={onCheckoutCart}
+                onClick={handleCheckoutSubmit}
                 className="btn-transition w-full bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold py-3 rounded-xl shadow-md shadow-emerald-500/20 flex justify-center items-center gap-2 mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
               >
                 <CheckCircle2 className="w-4 h-4" />

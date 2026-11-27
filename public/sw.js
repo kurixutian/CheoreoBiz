@@ -1,9 +1,8 @@
-const CACHE_NAME = 'cheoreobiz-v2';
+const CACHE_NAME = 'cheoreobiz-v3';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon.svg',
   './icon-192.png',
   './icon-512.png'
 ];

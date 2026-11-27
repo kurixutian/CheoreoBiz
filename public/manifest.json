@@ -4,15 +4,15 @@
   "description": "Enterprise Cloud Ledger, Inventory, Supplier AP & POS Operations",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "display_override": [
-    "standalone",
     "fullscreen",
+    "standalone",
     "window-controls-overlay"
   ],
   "orientation": "portrait",
-  "background_color": "#090d16",
-  "theme_color": "#059669",
+  "background_color": "#0e1116",
+  "theme_color": "#0e1116",
   "categories": [
     "business",
     "finance",
@@ -30,12 +30,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }

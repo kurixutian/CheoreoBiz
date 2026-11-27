@@ -157,14 +157,17 @@ export default function App() {
     []
   );
 
-  // Sync dark mode class on <html>
+  // Sync dark mode class on <html> and PWA theme-color
   useEffect(() => {
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
     if (isDark) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
+      if (themeMeta) themeMeta.setAttribute('content', '#0e1116');
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
+      if (themeMeta) themeMeta.setAttribute('content', '#F7F7F5');
     }
   }, [isDark]);
 
@@ -824,7 +827,11 @@ export default function App() {
         status: existing ? existing.status : 'active',
         isEdited: true,
       };
-      if (idx > -1) nextOrders[idx] = savedOrder;
+      if (idx > -1) {
+        nextOrders[idx] = savedOrder;
+      } else {
+        nextOrders.unshift(savedOrder);
+      }
       logActivity(
         'sale',
         `Updated order ${editingOrderId} for "${customerName}" (Total: ₱${totalRevenue.toFixed(2)})`,
